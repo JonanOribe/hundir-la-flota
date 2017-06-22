@@ -15,13 +15,21 @@ public class Flota {
 		
 		PortaAviones portaAviones1=new PortaAviones();
 		Buque buque1= new Buque();
+		Buque buque2= new Buque();
+		Buque buque3= new Buque();
 		Lancha lancha1= new Lancha();
+		Lancha lancha2= new Lancha();
+		Lancha lancha3= new Lancha();
+		Lancha lancha4= new Lancha();
 		
 		flota1.add(portaAviones1);
 		flota1.add(buque1);
+		flota1.add(buque2);
+		flota1.add(buque3);
 		flota1.add(lancha1);
-		
-		System.out.println(flota1.toString());
+		flota1.add(lancha2);
+		flota1.add(lancha3);
+		flota1.add(lancha4);
 		
 		return flota1;
 		
@@ -30,7 +38,7 @@ public class Flota {
 	
 	@Override
 	public String toString() {
-		return "Flota [tipo=" + tipo + ", tamanio=" + tamanio + "]";
+		return "["+"Barco=" + tipo + ", tamanio=" + tamanio + "]";
 	}
 
 

@@ -71,7 +71,7 @@ public class Main {
 			opcion = pedirOpcion("Por favor, introduce una de las opciones del menú:");
 			switch (opcion) {
 			case 1: {
-				Funciones.lanzarFlota();
+				Funciones.jugar();
 				
 				break;
 			}

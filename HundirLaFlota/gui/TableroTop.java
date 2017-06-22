@@ -53,16 +53,5 @@ public class TableroTop extends JPanel{
 			}
 		}
 	}
-	
-	/*Dummy function, change it*/
-	public static void spitData(){
-		LabelGrid dummyLabel;
-		for (int i = 0; i < TableroBarcos.topGrid.length; i++){
-			for (int j = 0; j < TableroBarcos.topGrid[i].length; j++){
-				dummyLabel = (LabelGrid) TableroBarcos.topGrid[i][j];
-				dummyLabel.toConsole();
-			}
-		}
-	}
 
 }

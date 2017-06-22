@@ -18,8 +18,7 @@ import javax.swing.SwingUtilities;
 @SuppressWarnings("serial")
 public class LabelGrid extends JLabel implements MouseListener, MouseMotionListener{
 
-	private static TableroBarcos contenedor;
-	private int i,j;
+	
 	private final static String BARCOIZQPATH = "img/Barco-izq.png";
 	private final static String BARCODERPATH = "img/Barco-der.png";
 	private final static String BARCOMEDPATH = "img/Barco-med.png";
@@ -28,31 +27,13 @@ public class LabelGrid extends JLabel implements MouseListener, MouseMotionListe
 	private final static String BARCOABAJOPATH = "img/Barco-vert-abaj.png";
 	private final static String BARCOSOLOUNAPOSPATH = "img/Barco-1.png";
 	private final static String BARCOSOLOUNAPOSVERTPATH = "img/Barco-1-vert.png";
-	private boolean selected = false; //Para cuando hay un barco puesto ahi para siempre hasta que se resetee el board;
+	
+	private static TableroBarcos contenedor;
+	private int i,j;
+	private boolean hayBarco = false;
+	private boolean keepPaintingH = true; //Si hay un barco de manera permanente en la posicion mantiene el valor en el que hay que dibujarlo para siempre sino se updatea al apretar el raton
 	private int drawingShipPart = 0;
 	
-	public int getDrawingShipPart(){
-		return this.drawingShipPart;
-	}
-	
-	public void setDrawingShipPart(int newDSP){
-		this.drawingShipPart = newDSP;
-	}
-	
-	public void setSelected(boolean newS){
-		this.selected = newS;
-	}
-	
-	public boolean getSelected() {
-		return this.selected;
-	}
-	
-	public int[] getCoords(){
-		int[] coords = new int[2];
-		coords[0] = this.i;
-		coords[1] = this.j;
-		return coords;
-	}
 	public LabelGrid(String text, int i, int j){
 		super(text);
 		this.i = i;
@@ -63,16 +44,15 @@ public class LabelGrid extends JLabel implements MouseListener, MouseMotionListe
 		this.addMouseListener(this);
 	}
 	
-	/*Cada momento que se esta arrastrando desde tablerobarcos, o bien se redibuja tal como esta o 
-	 * si se esta arrastrando un barco y el raton esta dentro de la label se dibuja otra cosa.
-	 * Si se comienza a arrastrar desde fuera de tablerobarcos arrastrandoBarco no sera cierto	 */
+	/*Cada vez que se redibuje el componente dibujara su imagen correspondiente dependiendo de los datos
+	 * existentes en el tablero y en la propia casilla. */
 	public void paintComponent(Graphics g){
 		Graphics2D g2d = (Graphics2D) g;
 		super.paintComponent(g2d);
-		if (TableroBarcos.getTipoBarcoArrastrado() != 0 && this.drawingShipPart != 0){
+		if ( (TableroBarcos.getTipoBarcoArrastrado() != 0 && this.drawingShipPart != 0 ) || this.hayBarco){
 			try {
 				Image barco;
-				if (TableroBarcos.isHorizontal()){ //Pasarlo a una array supongo
+				if (this.keepPaintingH){ //Pasarlo a una array supongo
 					switch (this.drawingShipPart){
 					case 1:
 						barco = ImageIO.read(new File(BARCOIZQPATH));
@@ -116,7 +96,7 @@ public class LabelGrid extends JLabel implements MouseListener, MouseMotionListe
 	}
 	
 	public void toConsole(){
-		System.out.println((this.i-1) + " , " + (this.j-1));
+		System.out.println((this.i) + " , " + (this.j));
 	}
 
 	
@@ -140,25 +120,32 @@ public class LabelGrid extends JLabel implements MouseListener, MouseMotionListe
 
 	@Override
 	public void mouseExited(MouseEvent arg0) {
-		TableroBarcos.resetBoardLabels();
-		
+		TableroBarcos.cleanBoatPaintedLabels();
 	}
 
+	/*Al apretar el raton, si hemos elegido un barco de los de abajo (barcoArrastrado != 0) o bien
+	 * cambiara su orientacion horiz/vert al apretar mouse derecho o intentara dibujarlo permanentemente
+	 * si estamos en una posicion acceptada (que se determina al hacer mouseEnter en cada casilla, mirandola
+	 * a ella y las adyacentes)	 */
 	@Override
 	public void mousePressed(MouseEvent mouseAction) {
-		if (SwingUtilities.isRightMouseButton(mouseAction)){
-			TableroBarcos.resetBoardLabels();
-			TableroBarcos.setHorizontal(!TableroBarcos.isHorizontal());
-			paintBoat(false);
+		if (TableroBarcos.getTipoBarcoArrastrado() != 0) { //Si estamos arrastrando algun barco...
+			if (SwingUtilities.isRightMouseButton(mouseAction)){
+				TableroBarcos.cleanBoatPaintedLabels();
+				TableroBarcos.setHorizontal(!TableroBarcos.isHorizontal());
+				paintBoat(false);
+				contenedor.repaint();
+			}
+			else if (TableroBarcos.isAcceptedPos()){
+				LabelBarco barcoElegido = TableroBarcos.findSelectedBoatLabel();
+				barcoElegido.setCancelIcon();
+				TableroBarcos.cleanBoatPaintedLabels();
+				paintBoat(true);
+				TableroBarcos.passCoordsToBarcoLabel(barcoElegido);
+				TableroBarcos.setTipoBarcoArrastrado(0);
+				contenedor.repaint();
+			}		
 		}
-		//else if (TableroBarcos.isAcceptedPos()){
-			//this.selected = true;
-			//LabelBarco barcoElegido = TableroBarcos.findSelectedBoatLabel();
-			////barcoElegido.setVisible(false);
-			//paintBoat(true);
-		//}
-		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
@@ -167,15 +154,48 @@ public class LabelGrid extends JLabel implements MouseListener, MouseMotionListe
 		
 	}
 	
+	public boolean hayBarcoPermanente(){
+		return this.hayBarco;
+	}
+	
+	/*Pintara el barco en esta casilla y sus adyacentes dependiendo de si es en horizontal o vertical, si
+	 * permanente es cierto se pintara el barco para siempre en estas casillas si son posiciones legales.*/
 	private void paintBoat(boolean permanent){
-		if (TableroBarcos.getTipoBarcoArrastrado() > 1){
-			this.drawingShipPart = 1;
+		if (TableroBarcos.getTipoBarcoArrastrado() != 0) {
 			TableroBarcos.findAffectedGridLabels(this.i, this.j, permanent);
+			contenedor.repaint();
 		}
-		else {
-			this.drawingShipPart = 4; //Caso barco tamanyo 1
+	}
+	
+	public int getDrawingShipPart(){
+		return this.drawingShipPart;
+	}
+	
+	/*Solo cambia el grafico del barco si el booleano hayBarco (permanentemente) es falso, es decir que el usuario
+	 * no ha elegido esta posicion para situar un barco ya. Para volver a poder cambiar el grafico de esta label
+	 * si ha pasado eso hay que llamar a resetDraw()*/
+	public void setDrawingShipPart(int newDSP, boolean permanent){
+		if (!this.hayBarco) {
+			this.drawingShipPart = newDSP;
+			this.hayBarco = permanent;
+			this.keepPaintingH = TableroBarcos.isHorizontal();
 		}
-		contenedor.repaint();
+	}
+	/*Usada cuando se quiere que la label resetee su grafico y pueda volver a dibujar barcos por encima de ella
+	 * es decir que si habia un barco de manera permanente en esta posicion se olvidara de el y se kedara vacia.	 */
+	public void resetDraw(){
+		this.drawingShipPart = 0;
+		this.hayBarco = false;
+		this.keepPaintingH = true;
+	}
+	
+	/*Para obtener sus posiciones en la matriz (habra que restarle 1 debido a que las primeras posiciones
+	 * no cuentan ya que son A...Z y 1...9, asi que o dejarlo asi o cambiarlo en el futuro.*/
+	public int[] getCoords(){
+		int[] coords = new int[2];
+		coords[0] = this.i;
+		coords[1] = this.j;
+		return coords;
 	}
 	
 

@@ -15,8 +15,9 @@ import javax.swing.border.EtchedBorder;
 public class TableroBarcos extends JPanel{
 
 	private static LabelBarco[] flota;
+	private static LabelGrid[] lastLabelsDrawn; //Ultimas labels pintadas, usado para borrar sin tener que ciclar todas las posiciones
 	private static int tipoBarcoArrastrado = 0;
-	private static boolean horizontal = true;
+	private static boolean horizontal = true;  //Dibuja los barcos (no permanentemente dibujados) en horiz/vertical
 	private static boolean acceptedPos = false;
 	private static final int dimX = 9; //Dimensiones del grid de posiciones (sera la real +1 por el extra de numeros/letras asi que 8 (9) default)
 	private static final int dimY = 9;
@@ -58,25 +59,47 @@ public class TableroBarcos extends JPanel{
 	/*No hay inserciones diagonales, solo setea para que se dibujen las labels adyacentes en el grid
 	 * en vertical o en horizontal y les dice que dibujar, si no se pueden dibujar alguno de los trozos
 	 * porque esta fuera del grid el booleano acceptedPos lo avisa. (se llama a esta funcion al hacer
-	 * onMouseEnter a una label de la grid de arriba  con un barco seleccionado, la propia label setea sus valores
-	 * por si misma esta funcion las adyacentes). El reset a lo de dibujar se produce onMouseExit de la label con la funcion
-	 * de abajo */
-	public static void findAffectedGridLabels(int firstGridRow, int firstGridCol, boolean selecting){
-		int i, tmp, dim, draw;
-		if (horizontal) { i = tipoBarcoArrastrado-1; tmp = firstGridCol;  dim = dimX;  }
-		else { i = tipoBarcoArrastrado-1; tmp = firstGridRow; dim = dimY; }
+	 * onMouseEnter a una label de la grid superior con un barco seleccionado, esta funcion setea los valores
+	 * para que se dibujen correctamente la label elegida i las adyacentes). Se llama con drawPermanently cierto desde
+	 * mouseClick y pone los valores permanentes de la label entonces*/
+	public static void findAffectedGridLabels(int firstGridRow, int firstGridCol, boolean drawPermanently){
+		int i, counter, tmp, dim, draw;
+		if (horizontal) { tmp = firstGridCol;  dim = dimX;  }
+		else { tmp = firstGridRow; dim = dimY; }
+		i = tipoBarcoArrastrado-1;
+		lastLabelsDrawn = new LabelGrid[tipoBarcoArrastrado];
+		lastLabelsDrawn[0] = topGrid[firstGridRow-1][firstGridCol-1];
+		if (!topGrid[firstGridRow-1][firstGridCol-1].hayBarcoPermanente()) {
+			acceptedPos = true;
+			if (i == 0) { topGrid[firstGridRow-1][firstGridCol-1].setDrawingShipPart(4, drawPermanently); return;} //Si es un barco de un solo elemento...
+			else { topGrid[firstGridRow-1][firstGridCol-1].setDrawingShipPart(1, drawPermanently); } // Sino, pinta la label en la que esta el raton con el grafico de mas a la izkierda
+		} 
+		else { 
+			acceptedPos = false; 
+		}
+		counter = 1;
 		while ( i > 0) {
 			if (i == 1) { draw = 3; }
 			else { draw = 2;}
 			tmp++;
 			if (tmp < (dim)){
 				//System.out.println("Drawing to Row: " + firstGridRow + " , Col: " + firstGridCol + " , dim (x): " + dimX);
-				acceptedPos = true;
 				if (horizontal) { 
-					topGrid[firstGridRow-1][tmp-1].setDrawingShipPart(draw);
+					if (!topGrid[firstGridRow-1][tmp-1].hayBarcoPermanente()){
+						topGrid[firstGridRow-1][tmp-1].setDrawingShipPart(draw, drawPermanently);
+						lastLabelsDrawn[counter] = topGrid[firstGridRow-1][tmp-1];
+					} else {
+						acceptedPos = false;
+					}
 				} else {
-					topGrid[tmp-1][firstGridCol-1].setDrawingShipPart(draw);
-				}	
+					if (!topGrid[tmp-1][firstGridCol-1].hayBarcoPermanente()){
+						topGrid[tmp-1][firstGridCol-1].setDrawingShipPart(draw, drawPermanently);
+						lastLabelsDrawn[counter] = topGrid[tmp-1][firstGridCol-1];
+					} else {
+						acceptedPos = false;
+					}
+				}
+				counter++;
 			}
 			else {
 				acceptedPos = false;
@@ -86,17 +109,39 @@ public class TableroBarcos extends JPanel{
 		}
 	}
 	
+	/*Intenta dibujar como vacias las labels guardadas como pintadas en el ultimo ciclo
+	 * (si estan dibujadas permanentemente no podra pero por la funcion) y pone acceptedPos en falso*/
+	public static void cleanBoatPaintedLabels(){
+		if (lastLabelsDrawn == null) { return;}
+		for (LabelGrid label : lastLabelsDrawn){
+			if (label != null){
+				label.setDrawingShipPart(0, false);
+			}
+		}
+		acceptedPos = false;
+	}
+	
+	//No usada, pero puede que en el futuro para resetear el tablero... (usar resetDraw())
 	public static void resetBoardLabels(){
 		for (int i = 0; i < topGrid.length; i++){
 			for (int j = 0; j < topGrid[i].length; j++){
-				if (!topGrid[i][j].getSelected()) {
-					topGrid[i][j].setDrawingShipPart(0);
+				if (!topGrid[i][j].hayBarcoPermanente()) {
+					topGrid[i][j].setDrawingShipPart(0, false);
 				}
 			}
 		}
 	}
 	
-	//seguramente podria hacerse de otra forma?
+	/*Funcion usada para pasar las labels con las posiciones del barco dibujado permanentemente
+	 * a la labeldebarco que le corresponde (que ahora tendra el icono de cancelar el posicionamiento)
+	 * para que asi si se aprieta otra vez sepa que labels resetear. Resetea tambien las labels guardadas
+	 * ya que no las necesitamos mas */
+	public static void passCoordsToBarcoLabel(LabelBarco LB){
+		LB.setLabelsBarco(lastLabelsDrawn);
+		lastLabelsDrawn = null;
+	}
+	
+	//Podria hacerse de otra forma pero para 4-6 elementos total esta bien
 	public static void resetBoatLabels(){
 		for (int i = 0; i < flota.length; i++){
 			flota[i].setBorder(null);
@@ -104,6 +149,7 @@ public class TableroBarcos extends JPanel{
 		}
 	}
 	
+	/*Encuentra el barco seleccionado por el usuario actualmente*/
 	public static LabelBarco findSelectedBoatLabel(){
 		for (int i = 0; i < flota.length; i++){
 			if (flota[i].getSeleccionada()) { 
@@ -142,7 +188,7 @@ public class TableroBarcos extends JPanel{
 		JFrame window = new JFrame("test");
 		TableroBarcos content = new TableroBarcos();
 		window.setContentPane(content);
-		window.setPreferredSize(new Dimension(800,600));
+		window.setPreferredSize(new Dimension(700,700));
 		window.setVisible(true);
 		window.pack();
 	}

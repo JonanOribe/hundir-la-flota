@@ -2,29 +2,26 @@ package HundirLaFlota.ai;
 
 import java.util.Arrays;
 
-import HundirLaFlota.gui.LabelGridCombate;
-
-/*He creado una clase barco para llevar la cuenta de los barcos que la maquina pone sobre el tablero
- * Guardara tanto una array de Labels (las posiciones fisicas en el tablero) como sus coordenadas en
- * el tablero. La lista de nombres ordenados por tamaño son una constante i se asignan en el constructor.
- * Puede usarse tambien para los barcos que el usuario pone en el tablero ya vere. */
+/*Clase generalista barco, crea un barco y si lo haces a partir de sus coordenadas le asigna un nombre si tiene
+ * entre 1-4 coordenadas */
 public class Barco {
-
-	private LabelGridCombate[] posicionesEnTablero;
-	private String nombre;
-	private int[][] coordsTableroInt;
-	private static final String[] nombresPorTamanio = {"Lancha", "Buque", "Destructor", "Portaaviones"}; //Nombre para barco tamanio 1, 2, 3...
-
-	public Barco(LabelGridCombate[] posiciones){
-		this.posicionesEnTablero = posiciones;
-		this.nombre = setNombre(posiciones);
-		getCoordsFromLabels(posiciones);
-	}
-	//NOTA: tamanio sera implicita (length de la array posicionesEnTablero), getTamanio para obtenerlo, para cambiarlo cambia el numero de posiciones...
 	
-	private String setNombre(LabelGridCombate[] posiciones){
-		if (posiciones.length > 0 && posiciones.length <= nombresPorTamanio.length) {
-			nombre = nombresPorTamanio[posiciones.length-1];
+	protected String nombre;
+	protected int[][] coordsTableroInt;
+	protected static final String[] nombresPorTamanio = {"Lancha", "Buque", "Destructor", "Portaaviones"}; //Nombre para barco tamanio 1, 2, 3...
+	
+	public Barco(int[][] coordsTableroInt){
+		this.nombre = setNombrePorTamanio(coordsTableroInt.length);
+		this.coordsTableroInt = coordsTableroInt;
+	}
+	
+	public Barco(){
+		this.nombre = "";
+	}
+	
+	protected String setNombrePorTamanio(int tamanio){
+		if (tamanio > 0 && tamanio <= nombresPorTamanio.length) {
+			nombre = nombresPorTamanio[tamanio-1];
 		}
 		else {
 			nombre = "Barco desconocido";
@@ -32,25 +29,13 @@ public class Barco {
 		return nombre;
 	}
 	
-	private void getCoordsFromLabels(LabelGridCombate[] posiciones){
-		int i = 0;
-		this.coordsTableroInt = new int[posiciones.length][2];
-		for (LabelGridCombate posicion : posiciones){
-			this.coordsTableroInt[i] = posicion.getCoords();
-			i++;
-		}
+	/*Por si es necesario poner un nombre especial para el barco*/
+	protected void setNombreCustom(String nombreEspecial){
+		this.nombre = nombreEspecial;
 	}
 	
-	public LabelGridCombate[] getPosicionesEnTablero() {
-		return posicionesEnTablero;
-	}
-
 	public int getTamanio(){
-		return this.posicionesEnTablero.length;
-	}
-
-	public void setPosicionesEnTablero(LabelGridCombate[] posicionesEnTablero) {
-		this.posicionesEnTablero = posicionesEnTablero;
+		return this.coordsTableroInt.length;
 	}
 
 
@@ -62,8 +47,7 @@ public class Barco {
 	public void setNombre(String nombre) {
 		this.nombre = nombre;
 	}
-
-
+	
 	public int[][] getCoordsTableroInt() {
 		return coordsTableroInt;
 	}

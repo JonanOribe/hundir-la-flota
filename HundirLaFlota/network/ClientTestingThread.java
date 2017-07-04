@@ -1,4 +1,4 @@
-package network;
+package HundirLaFlota.network;
 
 /*Clase per testejar comandos de client en el hundir la flota, per ara dos comandos:
  * pedir bombardejar una posicio (4,4) y desconectarte (nomes et desconecta de debo

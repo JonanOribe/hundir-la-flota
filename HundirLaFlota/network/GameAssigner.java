@@ -1,4 +1,4 @@
-package network;
+package HundirLaFlota.network;
 
 public class GameAssigner extends ThreadedConnection{
 

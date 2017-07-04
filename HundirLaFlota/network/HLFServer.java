@@ -1,4 +1,4 @@
-package network;
+package HundirLaFlota.network;
 
 import java.net.ServerSocket;
 import java.net.Socket;

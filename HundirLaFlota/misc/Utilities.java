@@ -38,102 +38,71 @@ public class Utilities {
 			}
 		}
 	
-	/*Funcion para crear un grid de labels de barcos para que el usuario pueda seleccionar las posiciones
-	 * de los barcos a su antojo */
-	public static LabelGridBarcos[][] createLGrid(int rows, int cols, JPanel target){
-		String[] col_S = new String[cols-1];
-		for (int i = 0; i < col_S.length; i++){
-			col_S[i] = "" + (i+1);
-		}
-		String[] row_S = new String[rows-1];
-		for (int i = 0; i < row_S.length; i++){
-			row_S[i] = Character.toString((char)('A'+i));
-		}
-		int colN = 0,rowL = 0;		
-		LabelGridBarcos[][] myGrid = new LabelGridBarcos[rows-1][cols-1];
-		JLabel coordsSquare;
-		LabelGridBarcos gridSquare;
-		
-		for (int i = 0 ; i < rows ; i++) {
-			for (int j = 0; j < cols; j++) {
-				if (i == 0) { 
-					if (j == 0) {
-						coordsSquare = new JLabel("");
-						target.add(coordsSquare);
-						continue;
-					}
-					else {
-						coordsSquare = new JLabel(col_S[colN], SwingConstants.CENTER);
-						coordsSquare.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-						colN++;
-					}
-				}
-				else if (j == 0) { 
-					coordsSquare = new JLabel(row_S[rowL], SwingConstants.CENTER);
-					coordsSquare.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-					rowL++;
-				}
-				else {
-					gridSquare = new LabelGridBarcos(i, j);
-					myGrid[i-1][j-1] = gridSquare;
-					target.add(gridSquare);
-					continue;
-				}
-				target.add(coordsSquare);
-			}
-		}
-		return myGrid;
-	}
 	
-	/*Funcion para crear una grid de LabelGridCombate con opcional exportacion de una grid interior (vamos, todos los elementos
-	 * que no son A...Z i 1...9). MUy similar a la existente de arriba pero igualarlas es complicado debido a multiples castings */
-	public static LabelGridCombate[][] createCGrid(int rows, int cols, JPanel targetPanel, LabelGridCombate[][] exportedInnerGrid){
-		String[] col_S = new String[cols-1];
-		for (int i = 0; i < col_S.length; i++){
-			col_S[i] = "" + (i+1);
-		}
-		String[] row_S = new String[rows-1];
-		for (int i = 0; i < row_S.length; i++){
-			row_S[i] = Character.toString((char)('A'+i));
-		}
-		int colN = 0,rowL = 0;		
-		LabelGridCombate[][] myGrid = new LabelGridCombate[rows-1][cols-1];
-		JLabel coordsSquare;
-		LabelGridCombate gridSquare;
-		
-		for (int i = 0 ; i < rows ; i++) {
-			for (int j = 0; j < cols; j++) {
-				if (i == 0) { 
-					if (j == 0) {
-						coordsSquare = new JLabel("");
-						targetPanel.add(coordsSquare);
-						continue;
-					}
-					else {
-						coordsSquare = new JLabel(col_S[colN], SwingConstants.CENTER);
-						coordsSquare.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-						colN++;
-					}
-				}
-				else if (j == 0) { 
-					coordsSquare = new JLabel(row_S[rowL], SwingConstants.CENTER);
-					coordsSquare.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-					rowL++;
-				}
-				else {
-					if (exportedInnerGrid == null){
-						gridSquare = new LabelGridCombate(i, j, true);
-						myGrid[i-1][j-1] = gridSquare;
-					}else {
-						gridSquare = exportedInnerGrid[i-1][j-1];
-						myGrid[i-1][j-1] = exportedInnerGrid[i-1][j-1];	
-					}
-					targetPanel.add(gridSquare);
-					continue;
-				}
-				targetPanel.add(coordsSquare);
-			}
-		}
-		return myGrid;
-	}
+	/*Funcion para crear un grid de labels que heredan de JLabel de dos tipos por ahora, tipo 0 => LabelGridBarcos
+	 * que serian las posiciones del grid superior cuando colocas barcos y tipo 1 => LabelGridCombate que serian
+	 * las posiciones de los dos grids de una ventana de combate (por ahora).
+	 *La 2D array que obtienes deberas castearla al tipo de Label que quieras, supongo que es mejor hacerlo
+	 *asi y tener menos lineas de codigo que las dos funciones separadas antiguas*/
+    public static JLabel[][] createGrid(int rows, int cols, JPanel target, int tipo, JLabel[][] exportedInnerGrid){
+        String[] col_S = new String[cols-1];
+        for (int i = 0; i < col_S.length; i++){
+            col_S[i] = "" + (i+1);
+        }
+        String[] row_S = new String[rows-1];
+        for (int i = 0; i < row_S.length; i++){
+            row_S[i] = Character.toString((char)('A'+i));
+        }
+        int colN = 0,rowL = 0;      
+        JLabel[][] myGrid;
+        if (tipo == 0) {
+            myGrid = new LabelGridBarcos[rows-1][cols-1];
+        }else {
+            myGrid = new LabelGridCombate[rows-1][cols-1];
+        }
+        JLabel coordsSquare;
+        JLabel gridSquare;
+        
+        for (int i = 0 ; i < rows ; i++) {
+            for (int j = 0; j < cols; j++) {
+                if (i == 0) { 
+                    if (j == 0) {
+                        coordsSquare = new JLabel("");
+                        target.add(coordsSquare);
+                        continue;
+                    }
+                    else {
+                        coordsSquare = new JLabel(col_S[colN], SwingConstants.CENTER);
+                        coordsSquare.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+                        colN++;
+                    }
+                }
+                else if (j == 0) { 
+                    coordsSquare = new JLabel(row_S[rowL], SwingConstants.CENTER);
+                    coordsSquare.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+                    rowL++;
+                }
+                else {
+                    if (tipo == 0) {
+                        gridSquare = new LabelGridBarcos(i, j);
+                    }
+                    else {
+                        if (exportedInnerGrid == null){
+                            gridSquare = new LabelGridCombate(i, j, true);
+                            myGrid[i-1][j-1] = gridSquare;
+                        }else {
+                            gridSquare = exportedInnerGrid[i-1][j-1];
+                            myGrid[i-1][j-1] = exportedInnerGrid[i-1][j-1]; 
+                        }
+                    }
+                    myGrid[i-1][j-1] = gridSquare;
+                    target.add(gridSquare);
+                    continue;
+                }
+                target.add(coordsSquare);
+            }
+        }
+        return myGrid;
+    }
+    
 	}

@@ -24,8 +24,8 @@ public class PanelCombate extends JPanel{
 		topPanel.setLayout((new GridLayout(dimX,dimY,-1,-1)));
 		JPanel botPanel = new JPanel();
 		botPanel.setLayout((new GridLayout(dimX,dimY,-1,-1)));
-		gridCoordsTop = Utilities.createCGrid(dimX,dimY,topPanel,null);
-		gridCoordsBot = Utilities.createCGrid(dimX,dimY,botPanel,ancestor.exportaGrid()); //Creamos la grid para dibujarla en el panel con valores 0
+		gridCoordsTop = (LabelGridCombate[][])Utilities.createGrid(dimX,dimY,topPanel,1,null);
+		gridCoordsBot = (LabelGridCombate[][])Utilities.createGrid(dimX,dimY,botPanel,1,ancestor.exportaGrid()); //Creamos la grid para dibujarla en el panel con valores 0
 		this.add(topPanel);
 
 		this.add(botPanel);

@@ -35,15 +35,15 @@ public class BoatHandling {
 	en panelSituaBarcos por una mas similar a esta la verdad...
 	Devuelve null si la orientacion y tamanio del barco no dan una posicion legal*/
 	public static LabelGridCombate[] placeBoatOnGrid(int initialPosX, int initialPosY, int tamanio, boolean horizontal, LabelGridCombate[][] grid){
-		int dim = (horizontal) ? grid.length : grid[0].length;
-		int compruebaEje = (horizontal) ? initialPosY : initialPosX;
-		int i = tamanio-1;
+		int dim = (horizontal) ? grid.length : grid[0].length;			//Dependiendo de si es horizontal o no solo haremos cambios en una dimension (i o j)
+		int compruebaEje = (horizontal) ? initialPosY : initialPosX;	//Dependiendo de la orientacion tambien los cambios comenzaran en la posicion actual de i o de j
+		int i = tamanio-1;		//Miraremos todas las posiciones excepto la actual que se supone correcta
 		int counter = 1;
-		LabelGridCombate[] labelsBarco = new LabelGridCombate[tamanio];
+		LabelGridCombate[] labelsBarco = new LabelGridCombate[tamanio]; //Guardaremos todas las posiciones comprobadas correctamente en la array
 		labelsBarco[0] = grid[initialPosX][initialPosY];
 		while (i > 0){
 			if ((compruebaEje + counter) >= dim) { //Fuera de la grid...
-				return null;
+				return null; //Devolvemos null, sino seguimos probando la siguiente posicion
 			}
 			labelsBarco[counter] = (horizontal) ? grid[initialPosX][initialPosY+counter] : grid[initialPosX+counter][initialPosY];
 			i--;

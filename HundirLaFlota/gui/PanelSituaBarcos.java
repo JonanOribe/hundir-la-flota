@@ -170,7 +170,7 @@ public class PanelSituaBarcos extends JPanel{
 			}*/
 			PanelGrid.setLayout(new GridLayout(dimX,dimY,-1,-1));
 			
-			topGrid = Utilities.createLGrid(dimX,dimY, PanelGrid);
+			topGrid = (LabelGridBarcos[][])Utilities.createGrid(dimX,dimY, PanelGrid,0,null);
 			
 	    }
 	

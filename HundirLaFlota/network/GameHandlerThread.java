@@ -1,227 +1,205 @@
 package HundirLaFlota.network;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.net.Socket;
 
 /*Clase Threaded (ejecucion independiente) que gestiona una partida de HLF y gestiona la conexion con dos
- * clientes (P1 y P2) y la logica de la partida, dando turno y verificando condiciones de victoria, desconexiones... */
-public class GameHandlerThread extends ThreadedConnection{
+ * clientes (P1 y P2) a traves de dos objetos PlayerGameIntermediator que seran ellos los encargados de la conexion.
+ * Gestiona tambien la logica de la partida, verificando comandos, dando turno, mirando condiciones de victoria, desconexiones... */
+public class GameHandlerThread extends Thread{
 	
 
-	protected Socket P2Conn;
-	protected BufferedReader incomingDataP2;
-	protected PrintWriter outgoingDataP2;
+	private PlayerGameIntermediator P1Listener;
+	private PlayerGameIntermediator P2Listener;
 	long gameID;
-	int turn = 1;
-	int actualPlayer = 1;
-	String lastActionCommand = "";
-	String lastResponseCommand = "";
-	private static String[] legalActions = {"a","d/c"};
-	private static String[] legalResponses = {"h","m","d/c"};
+	int turn = 0;
+	int actualPlayer;
+	static String[] legalCommands = {"a","d/c","h","m","d/c","chat","r","R"};
+	static String[] legalActions = {"a","d/c","chat"};
+	static String[] legalResponses = {"h","m","d/c","chat"};
 	boolean running = true;
+	int waitingForRC = 0;
 	
 	public GameHandlerThread(long gameID, Socket P1Conn){ 
-		openConnection(P1Conn);
-		sendMsg(Long.toString(gameID)+",1", outgoingDataP1); //Anyadir un token perk es pugui reconnectar?
+		P1Listener = new PlayerGameIntermediator(this, 1,P1Conn);
+		P1Listener.start();
+		PlayerGameIntermediator.sendMsg(Long.toString(gameID)+",1", P1Listener.outgoingData); //Anyadir un token perk es pugui reconnectar?
 		this.gameID = gameID;
 	}
 	
-	/*Implementar... hacer checkeo con primera parte de la antigua conexion (mantener una string con eso?)
-	 * comprobar gameID y tal que el usuario deberia guardar*/
+	/*No testeada, funcion para reconectar un usuario a esta partida, lo reconecta a su intermediario*/
 	public void reconnectUser(boolean P1, Socket newConn){
-		if (P1) { openConnection(newConn); }
-		else { assignP2(newConn, false); }
+		if (P1) { P1Listener.openConnection(newConn); }
+		else { P2Listener.openConnection(newConn); }
+		waitingForRC = 0;
 		HLFServer.log("Reconnexion completada");
 	}
 	
-	//Comienza cuando hay las dos conexiones...
+	/*Bucle de ejecucion, la partida conecta una vez dos jugadores esten conectados. Comprueba
+	 * que los dos estan conectados de verdad y comienza el ciclo de turnos y jugador atacante/defensor
+	 * (el primer turno P1 es atacante y P2 defensor siempre, P1 y P2 dependen del orden de conexion)
+	 * La logica se gestiona a traves de las llamadas que el intermediario hace al programa (cuando le
+	 * llegan datos de un cliente) y el programa actuara en consecuencia llamando a otra funcion. Por eso
+	 * y como el contador de tiempo lo llevara la GUI (que enviara los datos al intermediario y este avisara
+	 * a esta clase) la unica funcion de este bucle es inicializacion de partida, espera infinita y reaccion
+	 * mediante interrupciones y finalmente finalizacion cuando las interrupciones hayan llevado a ello
+	 */
 	public void run() {
 			HLFServer.log("Starting game - notifying clients");
-			
-			//Eliminado timer porque creo que cosas de swing + threads hay conflictos (o no? nose), el timer
-			//Estara en la GUI i llamara a la funcion que toque para comprobar DCs (isAnyoneDC si en x segundos
-			//el cliente no responde... A lo mejor si creamos clase auxiliar solo para el timer rula (probar)
-			
-			isAnyoneDC(false);
+			checkForDCPlayers(false);
+			actualPlayer = 2; //Solo para la inicializacion
+			turn = 0;
+			cyclePlayers();
 			while(running){
-				sendReceiveCycle();
-				sendReceiveCycle();
-				turn++;
+				try {
+				sleep(500);
+				} catch(Exception e){
+					HLFServer.log("Error on the main thread. " + e.getMessage());
+				}
 			}
-			
+			HLFServer.log(thisGameID() + "Ending game.");
 	}
 	
-	/*Funcion que contiene la logica del programa, es un ciclo P1 -> envia datos a este programa, este los envia al P2 que mira
-	 * si habia barco o no y lo representa en pantalla, este resultado es enviado de vuelta a este programa y 
-	 * finalmente el programa reenvia el resultado al atacante para que lo represente en pantalla...
-	 * Dos ataques/respuestas (uno por cada jugador) hacen un turno, seguramente habra que hacerla mas modular
-	 * y con mejor control de errores... */
-	protected void sendReceiveCycle(){
-		boolean P1Turn = (actualPlayer == 1) ? sendMsg("t", outgoingDataP1) : sendMsg("t", outgoingDataP2);
-		P1Turn = (actualPlayer == 1) ? sendMsg("nt", outgoingDataP2) : sendMsg("nt", outgoingDataP1);
-		P1Turn = (actualPlayer == 1); //Lo otro daria siempre true por la funcion sendMsg
-		//Timer aqui tambe
-		boolean cycleCompleted = false;
-		String actionCommand;
-		String responseCommand;
-		String[] attackedPos;
-		this.lastActionCommand = ""; //Esto es por si el bucle se interrumpe para mantener los comandos ya obtenidos correctamente por el usuario cuando el bucle vuelva aunque creo que no es necesario, veremos...
-		this.lastResponseCommand = "";
-		while(!cycleCompleted){
-			try {
-				HLFServer.log("Entering the cycle, player " + actualPlayer + " goes , actual turn: " + turn);
-				
-				if (this.lastActionCommand.equals("")){
-					actionCommand = askDataFromPlayer(P1Turn, legalActions);
-					if (actionCommand.equals("d/c")) { isAnyoneDC(true); break;}
-					this.lastActionCommand = actionCommand; 
-				}
-				else {
-					actionCommand = this.lastActionCommand;
-				}
-				
-				HLFServer.log(thisGameID() +  "player " + (actualPlayer) + " sent command: " + actionCommand + ", last one: " + lastActionCommand);
-				
-				attackedPos = actionCommand.trim().split(",");
-				
-				//Sending the action to P2/P1
-				if (this.lastResponseCommand.equals("")){
-					if (P1Turn) { sendMsg(actionCommand, outgoingDataP2);  }
-					else { sendMsg(actionCommand, outgoingDataP1); }
-
-					HLFServer.log(thisGameID() + "sending " + actionCommand +" to other player, awaiting response");
-					
-					
-					//Obtaining the response to the action from P2/P1
-					responseCommand = askDataFromPlayer(!P1Turn, legalResponses);
-					if (responseCommand.equals("d/c")) { isAnyoneDC(true); break;}
-					this.lastResponseCommand = responseCommand;
-					HLFServer.log(thisGameID() + "Obtained " + responseCommand +" from other player, sending to player " + actualPlayer);
-				}
-				else {
-					responseCommand = this.lastResponseCommand;
-				}
-	
-				//Sending that response to P1/P2 so they can update their gamestate, itll be their turn now
-				if (attackedPos.length > 1) { //Hi ha posicio...
-					responseCommand = responseCommand + "," + attackedPos[1] + "," + attackedPos[2]; 
-				}
-				if (P1Turn) { sendMsg(responseCommand, outgoingDataP1);}
-				else {sendMsg(responseCommand, outgoingDataP2);}
-			
-				HLFServer.log(thisGameID() + "Final data sent to player " + actualPlayer + " (" + responseCommand +")");
-
-				this.lastActionCommand = "";
-				this.lastResponseCommand = "";
-				cycleCompleted = true;
-								
-				nextPlayerCycle();
-				
-
+	/*comprueba si el comando que el usuario quiere enviar es correcto dependiendo de si le toca atacar o 
+	 * ser atacado. Si lo es se lo envia al otro jugador para que responda*/
+	private int parseCommands(String command, boolean isPlayerTurn, int playerNum){
+		if (command == null) { //El player se ha desconectado de manera involuntaria...
+			checkForDCPlayers(false);
+			return -1;
+		}
+		String[] commandData = command.trim().split(",");
+		String[] allowedActions = (isPlayerTurn) ? legalActions : legalResponses;
+		
+		if (isLegalCommand(commandData[0], allowedActions)){	
+			if (commandData[0].equals("d/c")) { // current player wants to leave the game...
+				return 0;
 			}
-			catch (Exception e) {
-				HLFServer.log("Error in the main turn cycle. " + e.getMessage());
-				if(isAnyoneDC(false) == 0){
-					continue; //Si el error no viene por una desconexion reintentar
+			else if (commandData[0].equals("chat")){
+				return 1; //send, but not advance turn
+			}
+			else {
+				if (commandData[0].equals("h") || commandData[0].equals("m")){
+					return 3;
 				}
-				if (!running) { cycleCompleted = true; break; }
+				return 2; //envia y avanza turno
 			}
 		}
+		return -1; //No envies, comando ilegal este turno (h o m cuando atacas por ejemplo...
 	}
 	
-	/*Funcion para obtener datos de un jugador dentro de los aceptados, como solo puede ser
-	 * P1 o P2 he usado un booleano, sino poner el BufferedReader como parametro	 */
-	private String askDataFromPlayer(boolean isP1, String[] legalCommands){
-		String playerAction ="";
-		boolean correctInput = false;
-		try{
-			while (!correctInput){
-				if (isP1) {  playerAction = incomingData(incomingDataP1); }   
-				else { playerAction = incomingData(incomingDataP2); }
-				if (isLegalCommand(playerAction, legalCommands)) {
-					correctInput = true;
-				}
-			}
-			return playerAction;
-		}catch (Exception e){
-			HLFServer.log(thisGameID() + "Client " + (actualPlayer) + " sent an unrecognizable command. " + e.getMessage());
-			return null;
+	/*Funcion solo accesible por un solo thread (intermediario en este caso) que a partir del comando enviado por el 
+	 * usuario gestiona la resupesta que se le dara, siendo en la mayor parte de los casos enviar el comando al otro 
+	 * usuario a traves de su intermediario para que este responda y le envie el comando de respuesta a la partida */
+	public synchronized void playerCommandInterrupt(String command, int fromPlayer) {
+		int todo = parseCommands(command, (fromPlayer == actualPlayer), fromPlayer);
+		HLFServer.log(thisGameID() + "received data from player " + fromPlayer + ": " + command +" , its code is: " + todo);
+		//String[] commandParts;
+		PlayerGameIntermediator mediator;
+		switch (todo) {
+		case 0: //d/c
+			mediator = (fromPlayer == 1) ? P1Listener : P2Listener;
+			disconnectPlayer(mediator);
+			checkForDCPlayers(true);
+			break;
+		case 1: //chat
+		case 2: //a (when you're allowed to use a, else you go to -1)
+			mediator = (fromPlayer == 1) ? P2Listener : P1Listener;
+			mediator.sendCommandToPlayer(command);
+			break;
+		case 3: //h ("                                             ")
+			mediator = (fromPlayer == 1) ? P2Listener : P1Listener;
+			mediator.sendCommandToPlayer(command);
+			try{ sleep(500);} catch(Exception e){}
+			cyclePlayers(); //We got an attack -> hit or miss cycle complete, next player can choose a position now...
+			break;
+		case 4: //m ("                                             ")
+
+		default: //incorrect command, don't send
 		}
 	}
-	
-	/*Pasa al siguiente jugador*/
-	private void nextPlayerCycle(){
-		if (actualPlayer >= 2) {
-			actualPlayer = 1;
-		} else { 
-			actualPlayer++;
-		}
-	}
+
 	
 	/*Comprueba que el comando que ha introducido el usuario esta dentro de los legales*/
 	private boolean isLegalCommand(String command, String[] acceptedCommands){
-		String[] realCommand = command.trim().split(",");
 		for (int i = 0; i < acceptedCommands.length; i++){
-			if (realCommand[0].equals(acceptedCommands[i])){
+			if (command.equals(acceptedCommands[i])){
 				return true;
 			}
 		}
 		return false;
 	}
 	
-	/*Comprueba si hay algun usuario desconectado y si ha sido a proposito el otro/niguno si los dos estan
-	 * desconectados gana la partida si ha sido deliberado. Si no es deliberado la funcion que asigne ganador sera 
-	 * la que llama el timer	 */
-	protected int isAnyoneDC(boolean onPurpose){
-		int playersDCed = checkForPlayersDC();
+	/*Funcion para desconectar la conexion que mantiene el intermediario con el jugador
+	 * (efectivamente desconectandolo de la partida) */
+	private void disconnectPlayer(PlayerGameIntermediator thisPlayer){
+		thisPlayer.sendCommandToPlayer("d/c");
+		thisPlayer.closeAll();
+		thisPlayer.resetBuffer();
+		try{ sleep(500);} catch(Exception e){}
+	}
+
+	/*Pasa al siguiente jugador, avanza turno si ya se ha producido un 
+	 * ciclo de atacar -> respuesta (agua o tocado) */
+	private void cyclePlayers(){
+		PlayerGameIntermediator mediator = P1Listener;
+		if (actualPlayer >= 2) {
+			actualPlayer = 1;
+			mediator.sendCommandToPlayer("t");
+			mediator =  P2Listener;
+			mediator.sendCommandToPlayer("nt");
+			turn++;
+			HLFServer.log("Turn: " + turn + ", player 1 goes");
+		} else { 
+			mediator.sendCommandToPlayer("nt");
+			mediator =  P2Listener;
+			mediator.sendCommandToPlayer("t");
+			actualPlayer++;
+			HLFServer.log("Turn: " + turn + ", player 2 goes");
+		}
+	}
+
+	/*Comprueba si hay algun usuario desconectado y si ha sido a proposito. Si no es deliberado se iran haciendo
+	 * comprobaciones periodicas hasta la reconexion o hasta que el timer (en la GUI del jugador conectado) 
+	 * se active, se envie el comando al intermediario y este active la funcion de interrupcion por timer
+	 * (vamos que si ha sido deliberado asigna ganador, si no espera 60s y si no se ha reconectado asigna ganador (ESTO
+	 * HAY QUE IMPLEMENTARLO), si los dos estan desconectados finaliza la partida	 */
+	protected int checkForDCPlayers(boolean onPurpose){
+		int playersDCed = whoDCed();
+		waitingForRC = playersDCed;
 		if (playersDCed > 0) { 
 			if (playersDCed == 1) { HLFServer.log(thisGameID() + "C1 DISCONNECTED"); if (onPurpose) {gameEndCheck(1);}}//Nomes C1 desconnectat
 			else if(playersDCed == 2) { HLFServer.log(thisGameID() + "C2 DISCONNECTED");  if (onPurpose) {gameEndCheck(2);} } //Nomes C2 desconnectat
-			else { HLFServer.log(thisGameID() + "BOTH PLAYERS DISCONNECTED"); gameEndCheck(3);}//Cap client connectat.
+			else { HLFServer.log(thisGameID() + "BOTH PLAYERS DISCONNECTED"); gameEndCheck(3);}//Cap                                                                   connectat.
 			return playersDCed;
 		}
 		return 0;
 	}
-
 	
 	/*Funcion que comprueba si hay jugadores desconectados mirando sus canales de entrada/salida*/
-	private int checkForPlayersDC(){
-		int sendingError = 0, receivingError = 0;
-		HLFServer.log("Checking for DCed players...");
-		boolean P1s = sendMsg("R",outgoingDataP1);
-		boolean P2s = sendMsg("R", outgoingDataP2);
-		try { sleep(100); }catch(Exception e){}
-		String P1r,P2r;
-		P1r = incomingData(incomingDataP1);
-		P2r = incomingData(incomingDataP2);
-		HLFServer.log("Checking DC status -> S: " + P1s + ", " + P2s + ". R: " + P1r + ", " + P2r + ".");
-		if (!P1s) {sendingError += 1; }  //Envia primer el char per ready up
-		if (!P2s) { sendingError += 2;}
-		if (P1r == null) { receivingError += 1;}
-		if (P2r == null) { receivingError += 2;}
-		if (receivingError > sendingError){ return receivingError;}
-		else return sendingError;
+	private int whoDCed(){
+		int dced = 0;
+		boolean P1r,P2r;
+		if (P1Listener == null) { P1r = false; } 
+		else { P1r = P1Listener.isMyPlayerDC(); }
+		if (P2Listener == null) { P2r = false; } 
+		else { P2r = P2Listener.isMyPlayerDC(); }
+		HLFServer.log(thisGameID() + "Checking DC status -> P1: " + P1r + ", " + "P2 " + P2r +".");
+		if (!P1r) {dced += 1; }  //Envia primer el char per ready up
+		if (!P2r) { dced += 2;}
+		return dced;
 	}
 	
 	/*Cierra el programa (thread), todas sus conexiones y su ejecucion */
 	protected void closeAll(){
-		super.closeAll();
 		running = false;
-		try {
-			P2Conn.close();
-		} catch (Exception e){
-		}
 	}
 	
 	/*Funcion para obtener una descripcion de la partida actual*/
 	public String toString() { 
-		if (P2Conn != null) {
-			return (thisGameID() + " -> P1: " + P1Conn.getRemoteSocketAddress().toString() + ", P2: " + (P2Conn.getRemoteSocketAddress().toString()) + ", turn " + turn);
-		} else {
-			return (thisGameID() + " -> P1: " + P1Conn.getRemoteSocketAddress().toString() + ", P2: not connected" + ", turn " + turn);
+		if (P1Listener != null && P2Listener != null){
+			return (thisGameID() + " -> P1: " + P1Listener.myIP() + ", P2: " + P2Listener.myIP() + ", turn " + turn);
+		}
+		else {
+			return (thisGameID() + " Problems detecting players.");
 		}
 	}
 	
@@ -230,16 +208,16 @@ public class GameHandlerThread extends ThreadedConnection{
 	}
 	
 	/*Funcion para asignar a un jugador el gameID de esta partida para que se pueda reconectar*/
-	public void assignGameIDToPlayer(long gameID){
-		sendMsg(Long.toString(gameID), outgoingDataP1);
+	public void assignGameIDToPlayer(long gameID, int playerNumber){
+		PlayerGameIntermediator player = (playerNumber == 1) ? P1Listener : P2Listener;
+		PlayerGameIntermediator.sendMsg(Long.toString(gameID), player.outgoingData);
 	}
 
 	/*Creo que hay problemas con los timer + threads, por lo que el timer se ejecutara en el
-	 * cliente y llamara a esta funcion...
-	 */
+	 * cliente y llamara a esta funcion...	 */
 	public void timerCheck() {
 		HLFServer.log(thisGameID() + "Timer fired...");
-		int dcer = isAnyoneDC(false);
+		int dcer = checkForDCPlayers(false);
 		if (dcer > 0){
 			//Han pasado (timerdelay) segundos y hay alguien desconectado... 
 			gameEndCheck(dcer);
@@ -251,40 +229,42 @@ public class GameHandlerThread extends ThreadedConnection{
 		int winner = 0;
 		if (whoDCed == 1) { winner = 2; }
 		else if (whoDCed == 2) { winner = 1;}
+		else if (whoDCed == 3) { winner = 3; }
 		assignWinner(winner,true); 
-		this.closeAll();
-		HLFServer.finishGame(this.gameID);
 	}
 	
 	/*Asigna un cliente al jugador 2, abre sus conexiones y comienza la partida si es necesario*/
-	public void assignP2(Socket P2Conn, boolean start){
-		this.P2Conn = P2Conn;
-		try {			
-			this.incomingDataP2 = new BufferedReader(new InputStreamReader(P2Conn.getInputStream()));
-			this.outgoingDataP2 = new PrintWriter(new OutputStreamWriter(P2Conn.getOutputStream()));
-			sendMsg(Long.toString(gameID)+",2", outgoingDataP2); //Anyadir un token perk es pugui reconnectar?
-		} catch (Exception e){
-			System.out.println("Problemas conectandose con el segundo cliente, " + e.getMessage());
-		}
+	protected void assignP2(Socket P2Conn, boolean start){
+		P2Listener = new PlayerGameIntermediator(this, 2, P2Conn);
+		P2Listener.start();
+		PlayerGameIntermediator.sendMsg(Long.toString(gameID)+",2", P2Listener.outgoingData); //Anyadir un token perk es pugui reconnectar?
 		if (start){
 			this.start();
 		}
 	}
 	
 	public boolean hasP2(){
-		boolean hasP2 = (P2Conn == null) ? false : true;
+		boolean hasP2 = (P2Listener == null) ? false : true;
 		return hasP2;
 	}
-	
+
 	/*Asigna el ganador de la partida, hay que expandirla para ganar por mas barcos destruidos...*/
-	private boolean assignWinner(int winner, boolean dcWin){
+	private void assignWinner(int winner, boolean dcWin){
 		String msg =  (dcWin) ? "dcwin":"win";
-		if (winner == 1) { sendMsg(msg, outgoingDataP1); } 
-		else if (winner == 2) { sendMsg(msg, outgoingDataP2); }  //Si es diferente no habra winner (los dos se desconectan wtf... o cambiar
-		HLFServer.log(thisGameID() + "Winner is player: " + winner);
+		if (winner == 1 && P1Listener != null ) { PlayerGameIntermediator.sendMsg(msg, P1Listener.outgoingData); } 
+		else if (winner == 2 && P2Listener != null) { PlayerGameIntermediator.sendMsg(msg, P2Listener.outgoingData); }  //Si es diferente no habra winner (los dos se desconectan wtf... o cambiar
+		if (winner == 1 || winner == 2) { HLFServer.log(thisGameID() + "Winner is player: " + winner); }
+		else { HLFServer.log(thisGameID() + "Both players quit!!!"); }
+		if (P1Listener != null) {
+			disconnectPlayer(P1Listener);
+			P1Listener = null;
+		}
+		if (P2Listener != null) {
+			disconnectPlayer(P2Listener);
+			P2Listener = null;
+		}
 		this.closeAll();
 		HLFServer.finishGame(this.gameID);
-		return true;
 	}
 
 

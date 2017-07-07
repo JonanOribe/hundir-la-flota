@@ -1,15 +1,18 @@
 package HundirLaFlota.network;
 
-/*Clase per testejar comandos de client en el hundir la flota, per ara dos comandos:
- * pedir bombardejar una posicio (4,4) y desconectarte (nomes et desconecta de debo
- * si es el teu torn...*/
-public class ClientTestingThread extends DiagnosticThread{
+import java.util.Scanner;
 
-	private ClientConnection client;
+/*Classe per testejar comandos de client en el hundir la flota, per ara tres comandos:
+ * demanar bombardejar una posicio (4,4), enviar chat, i desconectarte */
+public class ClientTestingThread extends Thread{
+
+	private static Scanner sc = new Scanner(System.in);
+	private ClientConnector PL;
 	private boolean exit = false;
+	private int userElection;
 	
-	public ClientTestingThread(ClientConnection client){
-		this.client = client;
+	public ClientTestingThread(ClientConnector PL){
+		this.PL = PL;
 	}
 	
 	public void run(){
@@ -22,40 +25,44 @@ public class ClientTestingThread extends DiagnosticThread{
 		System.out.println("----------------");
 		System.out.println("OPCIONES:");
 		System.out.println("1.Atacar posicion.");
-		System.out.println("1.Pedir desconexion.");
+		System.out.println("2.Enviar mensaje chat.");
+		System.out.println("3.Pedir desconexion.");
 		System.out.println("5.Salir.");
 	}
 	
 	public void mainLoop(){
-		int userElection;
 		while (!exit){
+			try {
 			writeMenu();
-			userElection = DiagnosticThread.pideEntero("Elige la opcion que quieras ejecutar");
-			switch(userElection){
-			case 1:
-				ClientConnection.sendMsg("a,4,4", client.outgoingDataP1);
-				break;
-			case 2:
-				ClientConnection.sendMsg("d/c", client.outgoingDataP1);
-				if (client.myTurn()){
-					client.closeAll();
-				}
-				break;
-			case 5:
-				exit = true;
-				System.out.println("Adios...");
-				break;
-			default:
-				System.out.println("Opcion incorrecta.");
+				userElection = DiagnosticThread.pideEntero("Elige la opcion que quieras ejecutar");
+				switch(userElection){
+					case 1:
+						ThreadedConnection.sendMsg("a,4,4", PL.outgoingData);
+						break;
+					case 2:
+						ThreadedConnection.sendMsg("chat,loloara alo fuck you you piece of shit", PL.outgoingData);
+						break;
+					case 3:
+						ThreadedConnection.sendMsg("d/c", PL.outgoingData);
+						break;
+					case 5:
+						exit = true;
+						System.out.println("Adios...");
+						break;
+					default:
+						System.out.println("Opcion incorrecta.");
+					}
+			} catch(Exception e){
+				this.kill();
 			}
 		}
-		sc.close();
 	}
 	
 	public void kill(){
 		exit = true;
+		userElection = 5;
+		sc.close();
+		System.exit(0); //AIXO NO CALDRA POSARHO EN EL FUTUR JA QUE AQUESTA CLASSE ES NOMES PER TESTEJAR FINS QUE TOT ES FACI DESDE LA GUI
 	}
 	
-	public void executeAction(int tipo){
-	}
 }

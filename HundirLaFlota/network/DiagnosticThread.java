@@ -2,10 +2,18 @@ package HundirLaFlota.network;
 
 import java.util.Scanner;
 
+/*Clase para mantener un menu en el servidor que por ahora te deja solo listar partidas y salir,
+ * se podrian expandir las propiedades de diagnostico en el futuro (listar puntos partidas, aciertos ...)*/
+
+/*A lo mejor clear superclase ThreadedMenu para diagnostic i clienttestingthread...*/
 public class DiagnosticThread extends Thread {
 	
-	protected static Scanner sc;
+	private static Scanner sc;
+	private HLFServer server;
 
+	public DiagnosticThread(HLFServer server){
+		this.server = server;
+	}
 	public void run(){
 		mainLoop();
 	}
@@ -18,7 +26,7 @@ public class DiagnosticThread extends Thread {
 			System.out.println("5.Salir.");
 		}
 		
-		private static void mainLoop(){
+		private void mainLoop(){
 			boolean exit = false;
 			int userElection;
 			while (!exit){
@@ -31,7 +39,7 @@ public class DiagnosticThread extends Thread {
 				case 5:
 					exit = true;
 					System.out.println("Adios...");
-					HLFServer.close();
+					server.close();
 					break;
 				default:
 					System.out.println("Opcion incorrecta.");

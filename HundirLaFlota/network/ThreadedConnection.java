@@ -10,16 +10,16 @@ import java.net.Socket;
  * mantenerse ejecutando como thread independiente si es necesario*/
 public class ThreadedConnection extends Thread{
 	
-	volatile protected BufferedReader incomingDataP1;
-	volatile protected PrintWriter outgoingDataP1;
-	protected Socket P1Conn;
+	volatile protected BufferedReader incomingData;
+	volatile protected PrintWriter outgoingData;
+	protected Socket conn;
 	
 	protected boolean openConnection(Socket P1Conn){
-		this.P1Conn = P1Conn;
+		this.conn = P1Conn;
 		try {		
 			//P1Conn.setKeepAlive(true);    //????DO THIS?
-			this.incomingDataP1 = new BufferedReader(new InputStreamReader(P1Conn.getInputStream()));
-			this.outgoingDataP1 = new PrintWriter(new OutputStreamWriter(P1Conn.getOutputStream()));
+			this.incomingData = new BufferedReader(new InputStreamReader(P1Conn.getInputStream()));
+			this.outgoingData = new PrintWriter(new OutputStreamWriter(P1Conn.getOutputStream()));
 			return true;
 		} catch (Exception e){
 			System.out.println("Problemas abriendo los canales de datos, " + e.getMessage());
@@ -39,14 +39,18 @@ public class ThreadedConnection extends Thread{
 		
 	protected void closeAll(){
 		try {
-			P1Conn.close();
-			incomingDataP1.close();
-			outgoingDataP1.close();
+			conn.close();
+			incomingData.close();
+			outgoingData.close();
 		} catch (Exception e){
 		}
 	}
 	
-	protected String incomingData(BufferedReader incomingData){
+	protected boolean isConnected(){
+		return (this.conn != null);
+	}
+	
+	protected String fetchData(BufferedReader incomingData){
 		String data;
 		try {
 			if ((data = incomingData.readLine()) != null){

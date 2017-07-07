@@ -5,8 +5,8 @@ import java.net.Socket;
 /* Clase con doble funcion: En primer lugar tiene las funciones para conectarse/reconectarse con el servidor que 
  * es quien le asignara una partida libre o con ID determinada para jugar con amigos (o le dejara reconectarse a esta).
  * 
- * En segundo lugar, esta la clase te deja mantener la conexion entre el jugador y la partida asignada(gameHandlerThread) a traves de un 
- * intermediaro (PlayerGameIntermediator, que sera el que mantiene de verdad la conexion y le pasa
+ * En segundo lugar, esta la clase te deja mantener la conexion entre el jugador y la partida asignada(gameHandlerThread) a 
+ * traves de un intermediaro (PlayerGameIntermediator, que sera el que mantiene de verdad la conexion y le pasa
  * los datos de manera ordenada a la partida). Guarda la ID de la partida actual por si hay que reconectarse.
  * Recibe/Envia datos de la partida a traves del intermediario y una vez procesados reenvia las respuestas.
  * Los inputs normalmente vendran por interrupts del raton o al enviar chat, estos llamaran a alguna funcion 

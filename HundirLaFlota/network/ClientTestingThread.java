@@ -40,7 +40,7 @@ public class ClientTestingThread extends Thread{
 						ThreadedConnection.sendMsg("a,4,4", PL.outgoingData);
 						break;
 					case 2:
-						ThreadedConnection.sendMsg("chat,loloara alo fuck you you piece of shit", PL.outgoingData);
+						ThreadedConnection.sendMsg("chat,loloara alo this is a chat test", PL.outgoingData);
 						break;
 					case 3:
 						ThreadedConnection.sendMsg("d/c", PL.outgoingData);

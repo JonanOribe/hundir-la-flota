@@ -17,7 +17,6 @@ public class GameAssigner extends ThreadedConnection{
 				HLFServer.log("wrong client handshake: " + msg); //canviar a enviar msg error al client
 				conn.close();
 			}
-		
 			//HANDSHAKE DEL SERVER
 			sendMsg(HLFServer.HANDSHAKETEXT, this.outgoingData);
 			HLFServer.log("Handshake completado..");

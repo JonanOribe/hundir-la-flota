@@ -9,10 +9,10 @@ import java.util.Arrays;
  * la partida que desean. Una vez son dos jugadores en una partida esta comienza y se ejecuta de manera independiente al servidor (thread) mientras este
  * sigue escuchando por si hay mas conexiones. Genera a la vez un thread con un menu con opciones basicas para controlar algunos detalles del servidor en runtime
  * a traves de la consola.*/
-public class HLFServer{
+public class HLFServer extends Thread{
 	
 	static final String HANDSHAKETEXT = "HLF"; //TEXTO QUE ENVIARAN TANTO EL CLIENTE COMO EL SERVIDOR EL UNO AL OTRO PARA SABER QUE SE ESTAN COMUNICANDO ENTRE SI Y NO ES UN PROGRAMA ALEATORIO
-	static final int DEFAULTPORT = 4522;
+	public static final int DEFAULTPORT = 4522;
 	private int port;
 	private boolean running = true;
 	private static long actualGameId;
@@ -36,7 +36,7 @@ public class HLFServer{
 	 * verificado se le une a una partida y se comienza la partida si son dos jugadores. Los primeros datos
 	 * seran enviados/recibidos a partir de un objeto gameAssigner y luego la conexion sera gestionada
 	 * mediante los PlayerGameIntermediator de la partida asignada	 */
-	protected void listenForClients(){
+	public void listenForClients(){
 		DiagnosticThread menu = new DiagnosticThread(this);
 		menu.start();
 		try {
@@ -60,6 +60,8 @@ public class HLFServer{
 						case 2:
 							reconnectUser(false, playerAction[1], clientConn); //rejoin as P2
 							break;
+						case 3:
+							break;
 						default:
 							log("Unknown response to: " + Arrays.toString(playerAction));
 					}
@@ -72,8 +74,13 @@ public class HLFServer{
 		}
 	}
 	
+	/*Si quieres que no se ejecute como programa principal sino como thread...*/
+	public void run(){
+		listenForClients();
+	}
+	
 	/*Funcion para retornar la siguiente partida publica vacia*/
-	public static GameHandlerThread nextEmptyPublicGame(){
+	public static synchronized GameHandlerThread nextEmptyPublicGame(){
 		for (int i = 0; i < concurrentGames.size(); i++){
 			if (concurrentGames.get(i).gameID <= actualGameId) {  //Si es una partida publica (no tiene una custom gameID...)
 				if (!concurrentGames.get(i).hasP2()) { 
@@ -96,7 +103,7 @@ public class HLFServer{
 	}
 	
 	/*Devuelve la partida con gameID determinada*/
-	public static GameHandlerThread findCustomGame(long cGameID){ //Se podria crear una lista de partidas publicas i una de privadas para hacer mas rapida esta buskeda...?
+	public static synchronized GameHandlerThread findCustomGame(long cGameID){ //Se podria crear una lista de partidas publicas i una de privadas para hacer mas rapida esta buskeda...?
 		for (int i = 0; i < concurrentGames.size(); i++){
 			if (concurrentGames.get(i).gameID == cGameID) {  //Si es una partida publica (no tiene una custom gameID...)
 				if (!concurrentGames.get(i).hasP2()) { 
@@ -114,7 +121,7 @@ public class HLFServer{
 	
 	/*Crea una nueva partida publica (con un gameID asigando a partir de la actualGameID que comienza a 0 y va incrementando
 	 * en 1 por cada nueva partida creada)	 */
-	public static void createNewPublicGame(Socket playerConn){
+	public static synchronized void createNewPublicGame(Socket playerConn){
 		GameHandlerThread newGame = new GameHandlerThread(actualGameId++, playerConn);
 		concurrentGames.add(newGame);
 		log("Assigning player to new game: " + (actualGameId-1) + ", gameId is now: " + actualGameId);
@@ -122,7 +129,7 @@ public class HLFServer{
 	
 	/*Crea una nueva partida custom (con un gameID del orden de 4000000+, esta es la teoria pero es facil hacer que 
 	 * se acepten letras tambien (FUTURO supongo mas que nada para future proof)	 */
-	public static void createNewCustomGame(long cGameID, Socket playerConn){
+	public static synchronized void createNewCustomGame(long cGameID, Socket playerConn){
 		GameHandlerThread newGame = new GameHandlerThread(cGameID, playerConn);
 		concurrentGames.add(newGame);
 		log("Assigning player to new custom game with ID: " + cGameID);

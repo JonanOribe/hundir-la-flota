@@ -10,6 +10,8 @@ import javax.swing.SwingUtilities;
 
 import HundirLaFlota.ai.BoatHandling;
 import HundirLaFlota.misc.Utilities;
+import HundirLaFlota.network.ClientConnector;
+import HundirLaFlota.network.HLFServer;
 
 /*Panel que contendra los paneles con la grid del usuario y un contrincante y gestionara
  * la comunicacion entre estos */
@@ -17,10 +19,15 @@ import HundirLaFlota.misc.Utilities;
 public class PanelCombate extends JPanel{
 	
 	private LabelGridCombate[][] gridCoordsTop, gridCoordsBot;
+	static final String DEFAULTPREFIX = ">> ";   //Prefijo que antepondra a los mensajes de chat
+	private PanelCombateActionHandler eventHandler;
+	private String chosenIP;
+	private int chosenPort;
+	private boolean jugadorDC = false;
 	
     private javax.swing.JPanel bottomLeftPanel;
-    private javax.swing.JTextArea chatScrollablePanel;
-    private textInputArea inputTextArea;
+    javax.swing.JTextArea chatScrollablePanel;
+    textInputArea inputTextArea;
     private javax.swing.JPanel leftMidSmallPanel;
     private javax.swing.JButton chatButton;
     private javax.swing.JButton reconnectButton;
@@ -28,12 +35,38 @@ public class PanelCombate extends JPanel{
     private javax.swing.JScrollPane chatTextPane;
     private javax.swing.JScrollPane inputPane;
     private javax.swing.JPanel topLeftPanel;
+    private ClientConnector connector;
 
 	public PanelCombate(int dimX, int dimY, PanelSituaBarcos ancestor){
-		super();
-		initcomponents(dimX, dimY, ancestor);
+		this(dimX,dimY,ancestor,"127.0.0.1",HLFServer.DEFAULTPORT);
+	}
 	
-}
+	public PanelCombate(int dimX, int dimY, PanelSituaBarcos ancestor, String IP, int port){
+		super();
+		this.chosenIP = IP;
+		this.chosenPort = port;
+		initcomponents(dimX, dimY, ancestor);
+		this.connector = new ClientConnector(this, chosenIP, chosenPort);
+	}
+	
+	/*A partir de una IP y un puerto inicializa el conector y se intenta conectar a un servidor de 
+	 * Hundir la flota*/
+	public void startConnection(String newIP, int newPort){
+		this.chosenIP = newIP;
+		this.chosenPort = newPort;
+		this.connector.setIP(newIP);
+		this.connector.setPort(newPort);
+		startConnection();
+	}
+	
+	public void startConnection() { 
+		try {
+			this.connector.connectAndStart();
+		}catch(Exception e) {
+			System.out.println("ERROR AL INICIAR LA CONEXION: " + e.getMessage());
+		}
+	}
+	
 	private void initcomponents(int dimX, int dimY, PanelSituaBarcos ancestor) {
 		topLeftPanel = new javax.swing.JPanel();
         bottomLeftPanel = new javax.swing.JPanel();
@@ -44,7 +77,7 @@ public class PanelCombate extends JPanel{
         reconnectButton = new javax.swing.JButton();
         quitButton = new javax.swing.JButton();
         inputPane = new javax.swing.JScrollPane();
-        inputTextArea = new textInputArea();
+        inputTextArea = new textInputArea(this);  //CAMBIAR A UNA CLASE DEDICADA A LISTENER:..
         
 		LabelGridCombate.setContainer(this);
 		
@@ -83,15 +116,25 @@ public class PanelCombate extends JPanel{
 
         chatScrollablePanel.setColumns(20);
         chatScrollablePanel.setRows(5);
+        chatScrollablePanel.setLineWrap(true);
+        chatScrollablePanel.setWrapStyleWord(true);
         chatTextPane.setViewportView(chatScrollablePanel);
 
-        chatButton.setText("Send");
+        eventHandler = new PanelCombateActionHandler(this);
+        chatButton.setText("Enviar");
+        chatButton.addActionListener(eventHandler);
+        chatButton.addKeyListener(eventHandler);
+        
 
-        reconnectButton.setText("Reconnect");
+        reconnectButton.setText("Reconectar");
+        reconnectButton.addActionListener(eventHandler);
 
-        quitButton.setText("Quit");
+        quitButton.setText("Salir");
+        quitButton.addActionListener(eventHandler);
 
         inputPane.setViewportView(inputTextArea);
+        
+        inputTextArea.addKeyListener(eventHandler);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
@@ -156,7 +199,63 @@ public class PanelCombate extends JPanel{
 		gridCoordsTop = (LabelGridCombate[][])Utilities.createGrid(dimX,dimY,topLeftPanel,1,null);
 		gridCoordsBot = (LabelGridCombate[][])Utilities.createGrid(dimX,dimY,bottomLeftPanel,1, ancestor.exportaGrid()); //Creamos la grid para dibujarla en el panel con valores 0
 	}
-
+	
+	/*Funcion de testeo para probar la colocacion de barcos por la AI*/
+	public void drawAIShips(){ //cambiar a private, etc.
+		BoatHandling.placeAllBoatsOnGrid(gridCoordsTop);
+	}
+	
+	/*Funcion para escribir texto en el chat principal del programa (el bloque de texto grande
+	 * a la derecha), usa un prefijo constante y salto de linea por cada bloque de texto enviado/recibido */
+	public void writeInChat(String text){
+		this.chatScrollablePanel.append(DEFAULTPREFIX + text + "\n");
+	}
+	
+	/*Envia un mensaje al servidor a traves del conector*/
+	public void sendMsgThroughConnector(String msg){
+		this.connector.sendMsgFromGUI(msg);
+	}
+	
+	public boolean isUserConnected(){
+		return connector.isConnected();
+	}
+	
+	/*Funcion que determina si un ataque en una posicion concreta toca barco o agua,
+	 * se basa en los datos recibidos por el conector del ataque enemigo
+	 * y modifica la LabelGridCombate determinada, que ademas redibuja	 */
+	public boolean enemyAttacksPos(int coordX, int coordY){
+		if (coordX > 0 && coordX < 9 && coordY > 0 && coordY < 9) { //Cambiar a usar dimx/dimy
+			if (this.gridCoordsBot[coordX-1][coordY-1].hasAShipPart()) {
+				this.gridCoordsBot[coordX-1][coordY-1].setDrawHitorMiss(true);
+				return true;
+			}
+		}
+		this.gridCoordsBot[coordX-1][coordY-1].setDrawHitorMiss(false);
+		return false;
+	}
+	
+	/*Funcion que llama el conector dependiendo de los datos recibidos por si tu ataque
+	 * ha tocado agua o un trozo de barco */
+	public void drawMyAttackResults(int coordX, int coordY, boolean itHit) {
+		this.gridCoordsTop[coordX-1][coordY-1].setDrawHitorMiss(itHit);
+	}
+	
+	public String getChosenIP(){
+		return this.chosenIP;
+	}
+	
+	public int getChosenPort(){
+		return this.chosenPort;
+	}
+	
+	public void setJugadorDC(boolean DC){
+		this.jugadorDC = DC;
+	}
+	
+	public boolean isJugadorDC(){
+		return jugadorDC;
+	}
+	
 	public LabelGridCombate[][] getGridCoordsTop() {
 		return gridCoordsTop;
 	}
@@ -172,18 +271,26 @@ public class PanelCombate extends JPanel{
 	public void setGridCoordsBot(LabelGridCombate[][] gridCoords) {
 		this.gridCoordsBot = gridCoords;
 	}
-	
-	public void drawAIShips(){ //cambiar a private, etc.
-		BoatHandling.placeAllBoatsOnGrid(gridCoordsTop);
+
+	/*Funciones para cambiar los textos de los botones por el gestor de eventos*/
+	public void cambiaQuitButton(String newText){
+		this.quitButton.setText(newText);
 	}
 	
-	public static void startNewCombat(PanelSituaBarcos situator){
+	public void cambiaReconnectButton(String newText){
+		this.reconnectButton.setText(newText);
+	}
+	
+	public static void startNewCombat(PanelSituaBarcos situator, String IP, int port){
 		JFrame window = new JFrame("test combate");
-		PanelCombate content = new PanelCombate(9,9,situator);
+		PanelCombate content = new PanelCombate(9,9,situator, IP, port);
 		window.setContentPane(content);
 		window.setPreferredSize(new Dimension(1100,700));
 		window.setVisible(true);
 		window.pack();
+		window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		window.getRootPane().setDefaultButton(content.chatButton);
+		content.startConnection("127.0.0.1", HLFServer.DEFAULTPORT);
 	}
 	
 	public static void main(String[] args){ /*codigo de testeo standalone*/
@@ -192,6 +299,7 @@ public class PanelCombate extends JPanel{
 		situator.drawSelBoatOnGrid(2,4,true); //Testing
 		PanelSituaBarcos.setTipoBarcoArrastrado(3);
 		situator.drawSelBoatOnGrid(5,2,true);
-		startNewCombat(situator);
+		startNewCombat(situator,"127.0.0.1", 4522);
+		
 	}
 }

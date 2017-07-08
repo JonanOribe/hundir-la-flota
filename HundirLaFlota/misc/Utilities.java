@@ -1,20 +1,29 @@
 package HundirLaFlota.misc;
 
 import java.awt.AlphaComposite;
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.RenderingHints;
+import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JTextField;
 import javax.swing.SwingConstants;
+import javax.swing.UIManager;
 
 import HundirLaFlota.gui.LabelGridBarcos;
 import HundirLaFlota.gui.LabelGridCombate;
+import HundirLaFlota.network.HLFServer;
 
 public class Utilities {
 
@@ -105,4 +114,125 @@ public class Utilities {
         return myGrid;
     }
     
+    /*Funcion para crear Paneles de menus con multiples botones y colores, hay un par de formatos implementados (vamos que se decoran diferente)*/
+    @SuppressWarnings("unused")
+    public static JPanel createCustomJPanel(Color[] backgroundColors, int layoutType, ActionListener parent, String... buttonNames) { //Macro for creating the layouts
+		/*Layout type 0 = single JPanel in the centre of the frame with Buttons  
+		 *Layout type 1 = 2 JPanels on top of each other, buttons in the lower one
+		 * 
+		 *#Backgroundcolors == #JPanels it'll default to gray, sanitized the array beforehand with grays instead of nulls
+		*/
+		
+		int numberOfButtons = 0;
+		
+		JPanel MainPanel = new JPanel();
+		if (backgroundColors == null) { backgroundColors = new Color[3]; backgroundColors[0] = Color.GRAY; backgroundColors[1] = Color.GRAY; backgroundColors[2] = Color.GRAY;}
+		MainPanel.setBackground(backgroundColors[0]);
+		MainPanel.setBorder(BorderFactory.createEmptyBorder(5,5,5,5));
+		
+		
+		if (layoutType == 0) {
+			MainPanel.setLayout(new GridLayout(3,3,10,10));
+			JPanel AuxPanel = new JPanel();
+			for (String buttonName : buttonNames) {
+				numberOfButtons++;
+			}
+			AuxPanel.setLayout(new GridLayout(numberOfButtons,1,5,5));
+			for (String buttonName : buttonNames) { //Had to do it in two for loops, maybe can improve? Its not that long
+				JButton Button = new JButton(buttonName);
+				AuxPanel.add(Button);
+				if (parent != null){
+					Button.addActionListener(parent);
+				}
+			}
+			AuxPanel.setBackground(backgroundColors[1]);
+			int i;
+			for (i = 1;i < 10; i++) { //Molt cutre, no em sortia aixi sino
+				if(i == 5) {
+					MainPanel.add(AuxPanel);
+				}
+				else {
+					JPanel shittyPanel = new JPanel();
+					shittyPanel.setVisible(false);
+					MainPanel.add(shittyPanel);
+				}
+				
+			}
+		}
+		else {
+			MainPanel.setLayout(new GridLayout(2,1,20,20));
+			JPanel AuxPanelTop = new JPanel();
+			JPanel AuxPanelBottom = new JPanel();
+			for (String buttonName : buttonNames) {
+				numberOfButtons++;
+			}
+			AuxPanelBottom.setLayout(new GridLayout(numberOfButtons,1,5,5));
+			for (String buttonName : buttonNames) { //Had to do it in two for loops, maybe can improve? Its not that long
+				JButton Button = new JButton(buttonName);
+				AuxPanelBottom.add(Button);
+				if (parent != null){
+					Button.addActionListener(parent);
+				}
+			}
+			AuxPanelTop.setBackground(backgroundColors[1]);
+			AuxPanelBottom.setBackground(backgroundColors[2]);
+			MainPanel.add(AuxPanelTop);
+			MainPanel.add(AuxPanelBottom);
+		}
+		
+		return MainPanel;
 	}
+    
+    /*Funcion para crear un dialogo especifico, por ahora hay un dialogo para pedir puerto de escucha del servidor y otro
+     * para pedir IP y puerto a las que conectarse como cliente   */
+    public static String[] createCustomDialog(JFrame frame, int tipo, String defaultIP, int defaultPort) {
+    	
+    	//Por ahora dos tipos, crear servidor y conectarte a servidor, primero solo puerto segundo puerto e IP
+    	
+	    String[] IPPort = new String[2];
+
+	    JPanel panel = new JPanel(new BorderLayout(5, 5));
+
+	    JPanel label = new JPanel(new GridLayout(0, 1, 2, 2));
+	    JPanel controls = new JPanel(new GridLayout(0, 1, 2, 2));
+	    JTextField IP = null;
+	    if (tipo > 0){
+		    label.add(new JLabel("IP", SwingConstants.RIGHT));
+		    IP = new JTextField();
+		    controls.add(IP);
+		    IP.setText(defaultIP); //Cambiar en el futuro, detectar IP usuario o tener lista de IPs de servers dedicados o nose...
+	    }
+	    label.add(new JLabel("Puerto", SwingConstants.RIGHT));
+	    panel.add(label, BorderLayout.WEST);
+	    JTextField  Puerto = new JTextField();
+	    Puerto.setText(Integer.toString(defaultPort));
+	    controls.add(Puerto);
+	    panel.add(controls, BorderLayout.CENTER);
+	    String message;
+	    if (tipo > 0) {
+	    	message = "Introduce los datos de la conexion";
+	    } else {
+	    	message = "En que puerto escuchara el servidor?";
+	    }
+        UIManager.put("OptionPane.noButtonText", "Cancelar");
+        UIManager.put("OptionPane.yesButtonText", "Aceptar");
+	    int eleccion = JOptionPane.showConfirmDialog(frame, panel,message,JOptionPane.YES_NO_OPTION);
+        UIManager.put("OptionPane.noButtonText", "No");
+        UIManager.put("OptionPane.yesButtonText", "Yes");
+        if (eleccion == 1) { return null; } //usuario eligio cancelar, volvemos atras...
+	    try {
+	    if (tipo > 0){
+	    	IPPort[0] = IP.getText();
+	    }
+	    IPPort[1] = Puerto.getText();
+	    }
+	    catch(Exception e){
+	    	System.out.println("Error en la introduccion de datos. " + e.getMessage());
+	    }
+	    return IPPort;
+	}
+    
+    public static String[] createCustomDialog(JFrame frame, int tipo) {
+    	return createCustomDialog(frame,tipo,"127.0.0.1",HLFServer.DEFAULTPORT);
+	}
+}

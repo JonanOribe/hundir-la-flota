@@ -18,10 +18,11 @@ public class textInputArea extends JTextArea{
 	private static final String DEFAULTTEXT = "...";
 	private static final int MAXROWS = 4;
 	private static final int MAXCOLS = 40;
+	private static PanelCombate contenedor;
 	
-	public textInputArea(){
+	public textInputArea(PanelCombate container){
 		super();
-		
+		contenedor = container;
 		this.setLineWrap(true);
 		this.setRows(MAXROWS);
 		this.setColumns(MAXCOLS);
@@ -29,7 +30,7 @@ public class textInputArea extends JTextArea{
 		
 		this.addFocusListener(new FocusListener() {
 		    public void focusGained(FocusEvent e) {
-		    	if (getText().equals("...")){
+		    	if (getText().equals(DEFAULTTEXT)){
 		    	setText("");
 		    	}
 		    }
@@ -40,7 +41,7 @@ public class textInputArea extends JTextArea{
 		    }
 
 		});
-
+		
 		this.getDocument().addDocumentListener(new DocumentListener() {
 			public void changedUpdate(DocumentEvent e) {
 				textExcessTest();
@@ -69,6 +70,10 @@ public class textInputArea extends JTextArea{
          };
          SwingUtilities.invokeLater(doAssist);
          }
+	 
+	public PanelCombate getContenedor(){
+		return contenedor;
+	}
 	 
 	 private void sText(String newText){
 		 this.setText(newText);

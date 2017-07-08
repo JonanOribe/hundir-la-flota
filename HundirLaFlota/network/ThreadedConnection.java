@@ -40,6 +40,7 @@ public class ThreadedConnection extends Thread{
 	protected void closeAll(){
 		try {
 			conn.close();
+			conn = null;
 			incomingData.close();
 			outgoingData.close();
 		} catch (Exception e){

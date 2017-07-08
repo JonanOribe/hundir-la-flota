@@ -27,6 +27,7 @@ public class LabelGridBarcos extends JLabel implements MouseListener{
 	protected final static String BARCOSOLOUNAPOSPATH = "img/Barco-1.png";
 	protected final static String BARCOSOLOUNAPOSVERTPATH = "img/Barco-1-vert.png";
 	protected final static String EXPLOSION = "img/explosion1.jpeg";
+	protected final static String AGUA = "img/fallo.jpg"; //para disparos fallidos...
 	protected final static String MAR1 = "img/mar1.jpg";
 	protected final static String MAR2 = "img/mar2.jpg";
 
@@ -85,6 +86,12 @@ public class LabelGridBarcos extends JLabel implements MouseListener{
 					break;
 				case 4: //case barco tamanyo 1
 					barco = (this.keepPaintingH) ? ImageIO.read(new File(BARCOSOLOUNAPOSPATH)) :  ImageIO.read(new File(BARCOSOLOUNAPOSVERTPATH));
+					break;
+				case 5: //case explosion
+					barco = (this.keepPaintingH) ? ImageIO.read(new File(EXPLOSION)) :  ImageIO.read(new File(EXPLOSION));
+					break;
+				case 6: //case barco tamanyo 1
+					barco = (this.keepPaintingH) ? ImageIO.read(new File(AGUA)) :  ImageIO.read(new File(AGUA));
 					break;
 				default:
 					barco = (this.keepPaintingH) ? ImageIO.read(new File(EXPLOSION)) : ImageIO.read(new File(EXPLOSION));

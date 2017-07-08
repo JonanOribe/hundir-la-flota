@@ -46,6 +46,9 @@ public class GameHandlerThread extends Thread{
 	public void run() {
 			HLFServer.log("Starting game - notifying clients");
 			checkForDCPlayers(false);
+			PlayerGameIntermediator.sendMsg("start", P2Listener.outgoingData);
+			PlayerGameIntermediator.sendMsg("start", P1Listener.outgoingData);
+			try { sleep(500);} catch(Exception e){}
 			actualPlayer = 2; //Solo para la inicializacion
 			turn = 0;
 			cyclePlayers();
@@ -74,7 +77,12 @@ public class GameHandlerThread extends Thread{
 				return 0;
 			}
 			else if (commandData[0].equals("chat")){
-				return 1; //send, but not advance turn
+				if (P1Listener != null && P2Listener != null) { //Si el otro jugador no esta conectado no enviar chat
+					if (P1Listener.isConnected() && P2Listener.isConnected()){
+						return 1; //send, but not advance turn
+					}
+				}
+				return -1; 
 			}
 			else {
 				if (commandData[0].equals("h") || commandData[0].equals("m")){
@@ -240,6 +248,7 @@ public class GameHandlerThread extends Thread{
 		PlayerGameIntermediator.sendMsg(Long.toString(gameID)+",2", P2Listener.outgoingData); //Anyadir un token perk es pugui reconnectar?
 		if (start){
 			this.start();
+			try{ sleep(500);} catch(Exception e){}
 		}
 	}
 	

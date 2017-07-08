@@ -22,12 +22,20 @@ public class PanelSituaBarcos extends JPanel{
 	private static boolean acceptedPos = false; 
 	public static final int dimX = 9; //Dimensiones del grid de posiciones (sera la real +1 por el extra de numeros/letras asi que 8 (9) default)
 	public static final int dimY = 9;
+	private String chosenIP; //For playing MP...
+	private int chosenPort;
 	private LabelGridBarcos[][] topGrid; //Referencia al grid de arriba con las posiciones deseadas de los barcos
 	private JButton BotonAceptar;
 	
 	public PanelSituaBarcos(){
 		super();
 		initComponents();
+	}
+	
+	public PanelSituaBarcos(String IP, int port){
+		this();
+		this.chosenIP = IP;
+		this.chosenPort = port;
 	}
                       
 	   	private void initComponents() {
@@ -74,7 +82,7 @@ public class PanelSituaBarcos extends JPanel{
        	    		JButton src = (JButton)e.getSource();
        	    		JFrame contenedor = (JFrame)src.getTopLevelAncestor();
        	    		PanelSituaBarcos thisPanel = (PanelSituaBarcos)contenedor.getContentPane();
-       	    		PanelCombate.startNewCombat(thisPanel);
+       	    		PanelCombate.startNewCombat(thisPanel, chosenIP, chosenPort);
        	    		contenedor.dispose();
        	    	}
 	        });
@@ -92,6 +100,15 @@ public class PanelSituaBarcos extends JPanel{
 	        });
 	        
 	        JButton BotonAtras = new JButton("Atras"); //Implementarlo una vez tengas el menu
+	        BotonAtras.addActionListener(new ActionListener () {
+       	    	public void actionPerformed (ActionEvent e) {
+	       	 		JButton src = (JButton)e.getSource();
+	    			JFrame window = (JFrame)src.getTopLevelAncestor();
+	    			MenuInicial.createMenuInitialWindow();
+	    			window.dispose();
+       	    	}
+	        	
+	        });
 
 	        javax.swing.GroupLayout PanelBotonesLayout = new javax.swing.GroupLayout(PanelBotones);
 	        PanelBotones.setLayout(PanelBotonesLayout);
@@ -319,6 +336,16 @@ public class PanelSituaBarcos extends JPanel{
 		PanelSituaBarcos.acceptedPos = acceptedPos;
 	}
 
+	public static JFrame createNewPSBWindow(String IP, int port){
+		JFrame window = new JFrame("Posiciona tus barcos");
+		PanelSituaBarcos content = new PanelSituaBarcos(IP, port);
+		window.setContentPane(content);
+		window.setResizable(false);
+		//window.setPreferredSize(new Dimension(700,700));
+		window.setVisible(true);
+		window.pack();
+		return window;
+	}
 
 	public static void main(String[] args){
 		JFrame window = new JFrame("test");

@@ -14,6 +14,7 @@ import javax.swing.JLabel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 
+
 @SuppressWarnings("serial")
 public class LabelGridBarcos extends JLabel implements MouseListener{
 
@@ -53,27 +54,57 @@ public class LabelGridBarcos extends JLabel implements MouseListener{
 	public void paintComponent(Graphics g){
 		Graphics2D g2d = (Graphics2D) g;
 		super.paintComponent(g2d);
+		g2d.drawImage(getGridBackgroundImage(false), 0, 0, this.getWidth(), this.getHeight(), this);
 		if ( (PanelSituaBarcos.getTipoBarcoArrastrado() != 0 && this.drawingShipPart != 0 ) || this.hayBarco){
 			try{
-				BufferedImage imagenTransp = drawShipImage(false);
-				g2d.drawImage(imagenTransp, 0, 0, this.getWidth(), this.getHeight(), this);
-				//System.out.println("dibujando?");
+				g2d.drawImage(getGridForegroundImage(false), 0, 0,this.getWidth(), this.getHeight(), this);
 			}catch (Exception e){
 				System.out.println(e.getMessage() + " ???");
 			}	
 		}
 	}
 	
+	/*Funcion para determinar si hay que dibujar la capa de background (mar) y una
+	 * segunda (p.ej: barco) o no */
+	protected boolean drawForeground(){
+		return (this.drawingShipPart != 0);
+	}
+	
+	/*Funcion que retorna verdadero si la posicion tiene un trozo de barco, depende
+	 * de la variable interna drawingShipPart	 */
+	protected boolean hasAShipPart(){
+		if (drawingShipPart >= 1 && drawingShipPart <= 4){
+			return true;
+		}
+		return false;
+	}
+	
+	
+	protected BufferedImage getGridBackgroundImage(boolean isTopGrid){
+		try {
+			Image fondo;
+			if (isTopGrid) { fondo = (this.i == PanelSituaBarcos.dimX-1) ?  ImageIO.read(new File(MAR2)) : ImageIO.read(new File(MAR1)); } 
+			else { fondo = (this.i == 1) ?  ImageIO.read(new File(MAR2)) : ImageIO.read(new File(MAR1)); }
+			BufferedImage fondoImg = new BufferedImage(this.getWidth(), this.getHeight(), BufferedImage.TYPE_INT_ARGB);
+			fondoImg = (BufferedImage)fondo;
+			return fondoImg;
+			}
+		catch (Exception e){
+			System.out.println("Error al dibujar la imagen de fondo. " + e.getMessage());
+			return null;
+		}	
+	}
+
 	/*Funcion para encontrar la imagen correcta a dibujar del barco en su coordenada, la 
-	 * la comprobacion si hay que dibujar es externa a esta	 */
-	protected BufferedImage drawShipImage(boolean isTopGrid){
+	 * la comprobacion si hay que dibujar es externa a esta	 
+	 * He dejado agua y tocado en foreground por si en el futuro queremos poner dos capas,
+	 * el agua y la explosion*/
+	protected BufferedImage getGridForegroundImage(boolean isTopGrid){
 			try {
-				Image barco;
-				switch (this.drawingShipPart){
-				case 0:  //Mar, solo tendria que aparecer cuando en combate, comprobaciones de eso en paintComponent
-					if (isTopGrid) { barco = (this.i == PanelSituaBarcos.dimX-1) ?  ImageIO.read(new File(MAR2)) : ImageIO.read(new File(MAR1)); }
-					else { barco = (this.i == 1) ?  ImageIO.read(new File(MAR2)) : ImageIO.read(new File(MAR1)); }
-					//Lo dibujaremos en las zonas encontradas del grid por motivos esteticos, cambiar si tal
+				Image barco = null;
+				//Asignacion de la imagen de fondo
+				switch (this.drawingShipPart){ //Esto elegira la imagen superpuesta a la de fondo
+				case 0:  
 					break;
 				case 1:
 					barco = (this.keepPaintingH) ? ImageIO.read(new File(BARCOIZQPATH)) : ImageIO.read(new File(BARCOARRIBAPATH));
@@ -87,20 +118,19 @@ public class LabelGridBarcos extends JLabel implements MouseListener{
 				case 4: //case barco tamanyo 1
 					barco = (this.keepPaintingH) ? ImageIO.read(new File(BARCOSOLOUNAPOSPATH)) :  ImageIO.read(new File(BARCOSOLOUNAPOSVERTPATH));
 					break;
-				case 5: //case explosion
+				case 5: //case tocado
 					barco = (this.keepPaintingH) ? ImageIO.read(new File(EXPLOSION)) :  ImageIO.read(new File(EXPLOSION));
 					break;
-				case 6: //case barco tamanyo 1
+				case 6: //case agua 
 					barco = (this.keepPaintingH) ? ImageIO.read(new File(AGUA)) :  ImageIO.read(new File(AGUA));
 					break;
 				default:
-					barco = (this.keepPaintingH) ? ImageIO.read(new File(EXPLOSION)) : ImageIO.read(new File(EXPLOSION));
 				}
-				BufferedImage imagenTransp = new BufferedImage(this.getWidth(), this.getHeight(), BufferedImage.TYPE_INT_ARGB);
-				imagenTransp = (BufferedImage) barco;
-				return imagenTransp;
+				BufferedImage imagenFinal = new BufferedImage(this.getWidth(), this.getHeight(), BufferedImage.TYPE_INT_ARGB);
+				imagenFinal = (barco == null) ? null : (BufferedImage)barco;
+				return imagenFinal;
 			}catch (Exception e){
-				System.out.println(e.getMessage() + " ???");
+				System.out.println("Error al dibujar las imagenes superpuestas. " + e.getMessage());
 				return null;
 			}	
 	}

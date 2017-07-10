@@ -53,6 +53,23 @@ public class PanelCombateActionHandler implements ActionListener, KeyListener{
 					panel.sendMsgThroughConnector("d/c"); //DESCONECTAMOS AL JUGADOR
 				}
 			}
+			else if (cmd.equals("Volver a jugar")){
+				JButton src = (JButton)evt.getSource();
+				JFrame window = (JFrame)src.getTopLevelAncestor();
+				PanelCombate panel = (PanelCombate)window.getContentPane();
+				window.dispose();
+				panel.stopAll();
+				PanelSituaBarcos.createNewPSBWindow(panel.getChosenIP(), panel.getChosenPort(), false);
+			}
+			else if (cmd.equals("Volver al menu")){
+				JButton src = (JButton)evt.getSource();
+				JFrame window = (JFrame)src.getTopLevelAncestor();
+				PanelCombate panel = (PanelCombate)window.getContentPane();
+				window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+				window.dispose();
+				panel.stopAll();
+				MenuInicial.createMenuInitialWindow();
+			}
 			else {
 				chatButtonPress();
 			}
@@ -62,9 +79,14 @@ public class PanelCombateActionHandler implements ActionListener, KeyListener{
 	private void chatButtonPress(){ //MOVER A CLASE AUXILIAR PQ CLUTTEREA EL CODIGO
 		String text = parent.inputTextArea.getText();
 		if (!text.equals("...") && !text.equals("")){
-			parent.inputTextArea.getContenedor().sendMsgThroughConnector("chat," + text);
-			parent.chatScrollablePanel.append(PanelCombate.DEFAULTPREFIX  + "Tu: " + text + "\n");
-			parent.inputTextArea.setText("");
+			if (!parent.isJugadorDC()){
+				parent.inputTextArea.getContenedor().sendMsgThroughConnector("chat," + text);
+				parent.chatScrollablePanel.append(PanelCombate.DEFAULTPREFIX  + "Tu: " + text + "\n");
+				parent.inputTextArea.setText("");
+			}
+			else {
+				parent.chatScrollablePanel.append(PanelCombate.DEFAULTPREFIX  + "funcion de chat no disponible.\n");
+			}
 		}
 	}
 

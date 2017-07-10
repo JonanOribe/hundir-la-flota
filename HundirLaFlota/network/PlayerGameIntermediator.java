@@ -18,6 +18,7 @@ public class PlayerGameIntermediator extends ThreadedConnection{
 	private boolean running = true;
 	private volatile String bufferedText = ""; //Volatile sera que no se fia de la cache, es decir siempre se comprueba el valor existente
 	int myPlayerNum;
+	boolean myPlayerWasActive;
 	
 	
 	public PlayerGameIntermediator(Socket conn){
@@ -90,6 +91,7 @@ public class PlayerGameIntermediator extends ThreadedConnection{
 				System.out.println(this.myPlayer() + "Cleared the DC check.");
 			}
 			else {
+				this.myPlayerWasActive = true; //Resetea el comprobador de desconexion
 				communicateCommandToGame(clientInput);
 			}
 		} catch(Exception e){
@@ -139,6 +141,14 @@ public class PlayerGameIntermediator extends ThreadedConnection{
 		super.closeAll();
 	}
 	
+	public boolean wasMyPlayerActive(){
+		return this.myPlayerWasActive;
+	}
+	
+	public void setPlayerActive(boolean newValue){
+		this.myPlayerWasActive = newValue;
+	}
+
 	/*Comprueba si la conexion con el usuario esta abierta*/
 	public boolean isMyPlayerDC(){
 		boolean connected = true;

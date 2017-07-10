@@ -17,7 +17,7 @@ public class PanelSituaBarcos extends JPanel{
 
 	private static LabelTipoBarco[] flota;
 	private static LabelGridBarcos[] lastLabelsDrawn; //Ultimas labels pintadas, usado para borrar sin tener que ciclar todas las posiciones
-	private static int tipoBarcoArrastrado = 0;
+	private static int tipoBarcoArrastrado;
 	private static boolean horizontal = true;  //Dibuja los barcos (no permanentemente dibujados) en horiz/vertical
 	private static boolean acceptedPos = false; 
 	public static final int dimX = 9; //Dimensiones del grid de posiciones (sera la real +1 por el extra de numeros/letras asi que 8 (9) default)
@@ -34,6 +34,7 @@ public class PanelSituaBarcos extends JPanel{
 	
 	public PanelSituaBarcos(String IP, int port){
 		this();
+		tipoBarcoArrastrado = 0;
 		this.chosenIP = IP;
 		this.chosenPort = port;
 	}
@@ -335,12 +336,14 @@ public class PanelSituaBarcos extends JPanel{
 	public static void setAcceptedPos(boolean acceptedPos) {
 		PanelSituaBarcos.acceptedPos = acceptedPos;
 	}
-
-	public static JFrame createNewPSBWindow(String IP, int port){
+	/*Bckground stuff determina si se ha creado un servidor no dedicado por lo que no 
+	 * debemos cerrar todo al cerrar la ventana. (buscar otros metodos) */
+	public static JFrame createNewPSBWindow(String IP, int port, boolean bkgStuff){
 		JFrame window = new JFrame("Posiciona tus barcos");
 		PanelSituaBarcos content = new PanelSituaBarcos(IP, port);
 		window.setContentPane(content);
 		window.setResizable(false);
+		if (!bkgStuff) window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		//window.setPreferredSize(new Dimension(700,700));
 		window.setVisible(true);
 		window.pack();

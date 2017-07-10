@@ -1,12 +1,14 @@
 package HundirLaFlota.gui;
 
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.GridLayout;
 
+import javax.swing.BorderFactory;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
+import javax.swing.border.EtchedBorder;
 
 import HundirLaFlota.ai.BoatHandling;
 import HundirLaFlota.misc.Utilities;
@@ -14,16 +16,22 @@ import HundirLaFlota.network.ClientConnector;
 import HundirLaFlota.network.HLFServer;
 
 /*Panel que contendra los paneles con la grid del usuario y un contrincante y gestionara
- * la comunicacion entre estos */
+ * la comunicacion entre estos 
+ * Agregar checkeo al cerrar ventana para cerrar el conector tb*/
 @SuppressWarnings("serial")
 public class PanelCombate extends JPanel{
 	
 	private LabelGridCombate[][] gridCoordsTop, gridCoordsBot;
-	static final String DEFAULTPREFIX = ">> ";   //Prefijo que antepondra a los mensajes de chat
+	static final String DEFAULTPREFIX = ">> ";   //Prefijo que se antepondra a los mensajes de chat
 	private PanelCombateActionHandler eventHandler;
 	private String chosenIP;
 	private int chosenPort;
-	private boolean jugadorDC = false;
+	private boolean jugadorDC;
+
+	private int puntos = 0;
+	private int turno = 1;
+	private int aciertos = 0;
+	private int aguas = 0;
 	
     private javax.swing.JPanel bottomLeftPanel;
     javax.swing.JTextArea chatScrollablePanel;
@@ -36,17 +44,28 @@ public class PanelCombate extends JPanel{
     private javax.swing.JScrollPane inputPane;
     private javax.swing.JPanel topLeftPanel;
     private ClientConnector connector;
-
+    public JLabel puntosLabel;
+    public JLabel turnosLabel;
+    public JLabel aciertosAguasLabel;
+    public JLabel jugadorLabel;
+    
+    /*Constructor para 1 jugador sin conector*/
 	public PanelCombate(int dimX, int dimY, PanelSituaBarcos ancestor){
-		this(dimX,dimY,ancestor,"127.0.0.1",HLFServer.DEFAULTPORT);
+		this(dimX,dimY,ancestor,false);
+	}
+    
+	public PanelCombate(int dimX, int dimY, PanelSituaBarcos ancestor, boolean startConnector){
+		this(dimX,dimY,ancestor,"127.0.0.1",HLFServer.DEFAULTPORT, startConnector);
 	}
 	
-	public PanelCombate(int dimX, int dimY, PanelSituaBarcos ancestor, String IP, int port){
+	public PanelCombate(int dimX, int dimY, PanelSituaBarcos ancestor, String IP, int port, boolean startConnector){
 		super();
 		this.chosenIP = IP;
 		this.chosenPort = port;
 		initcomponents(dimX, dimY, ancestor);
-		this.connector = new ClientConnector(this, chosenIP, chosenPort);
+		if(startConnector){
+			this.connector = new ClientConnector(this, chosenIP, chosenPort);
+		}
 	}
 	
 	/*A partir de una IP y un puerto inicializa el conector y se intenta conectar a un servidor de 
@@ -65,6 +84,12 @@ public class PanelCombate extends JPanel{
 		}catch(Exception e) {
 			System.out.println("ERROR AL INICIAR LA CONEXION: " + e.getMessage());
 		}
+	}
+	
+	public void stopAll(){
+		this.connector.stopRunning();
+		this.connector = null;
+		this.eventHandler = null;
 	}
 	
 	private void initcomponents(int dimX, int dimY, PanelSituaBarcos ancestor) {
@@ -113,8 +138,12 @@ public class PanelCombate extends JPanel{
             LeftMidSmallPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGap(0, 27, Short.MAX_VALUE)
         );
+        
+        JLabel enemyShipsLabel = new JLabel("Cuadrante del enemigo", JLabel.CENTER);
+        JLabel myShipsLabel = new JLabel("Mis barcos", JLabel.CENTER);
 
-        chatScrollablePanel.setColumns(20);
+        
+        chatScrollablePanel.setColumns(30);
         chatScrollablePanel.setRows(5);
         chatScrollablePanel.setLineWrap(true);
         chatScrollablePanel.setWrapStyleWord(true);
@@ -143,18 +172,23 @@ public class PanelCombate extends JPanel{
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, true)
+                	.addComponent(enemyShipsLabel,javax.swing.GroupLayout.PREFERRED_SIZE,javax.swing.GroupLayout.PREFERRED_SIZE,Short.MAX_VALUE)
+                	.addGap(5,5,5)
                     .addComponent(bottomLeftPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(topLeftPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(topLeftPanel,javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                	.addGap(5,5,5)
+                	.addComponent(myShipsLabel,javax.swing.GroupLayout.DEFAULT_SIZE,javax.swing.GroupLayout.DEFAULT_SIZE,Short.MAX_VALUE)
+                	.addGap(5,5,5)
                     .addComponent(leftMidSmallPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addGroup(layout.createSequentialGroup()
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, 50)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, 40)
                         .addComponent(reconnectButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE, 150)
                         .addComponent(quitButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, 150))
                     .addComponent(chatButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, 200)
-                    .addComponent(chatTextPane, javax.swing.GroupLayout.PREFERRED_SIZE, 100, 300)
-                    .addComponent(inputPane,  javax.swing.GroupLayout.PREFERRED_SIZE, 100, 300))
+                    .addComponent(chatTextPane, javax.swing.GroupLayout.DEFAULT_SIZE,javax.swing.GroupLayout.DEFAULT_SIZE, 300)
+                    .addComponent(inputPane, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, 300))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -163,15 +197,19 @@ public class PanelCombate extends JPanel{
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
+                        .addComponent(enemyShipsLabel)
+                        .addGap(10)
                         .addComponent(topLeftPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE, Short.MAX_VALUE)
-                        .addGap(18, 18, 18)
-                        .addComponent(leftMidSmallPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(18, 18, 18)
+                        .addGap(10, 10, 10)
+                        .addComponent(leftMidSmallPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, 40)
+                        .addGap(15)
+                        .addComponent(myShipsLabel)
+                        .addGap(11, 11, 11)
                         .addComponent(bottomLeftPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(chatTextPane, javax.swing.GroupLayout.PREFERRED_SIZE, 238, Short.MAX_VALUE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, 20)
-                        .addComponent(inputPane, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, 40)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, 5)
+                        .addComponent(inputPane, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, 20)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(chatButton)
                         .addGap(18, 18, 18)
@@ -181,6 +219,13 @@ public class PanelCombate extends JPanel{
                 .addContainerGap())
         );
         
+        enemyShipsLabel.setBorder(BorderFactory.createLineBorder(Color.BLACK,2));
+        enemyShipsLabel.setBackground(Color.BLUE);
+        myShipsLabel.setBorder(BorderFactory.createLineBorder(Color.BLACK,2));
+        myShipsLabel.setBackground(Color.BLUE);
+
+
+        
         chatButton.setFocusCycleRoot(true);
         chatButton.requestFocus();
         
@@ -188,12 +233,21 @@ public class PanelCombate extends JPanel{
         
         inputTextArea.setText("...");
        
-        leftMidSmallPanel.setLayout(new GridLayout(1,5,5,5));
-        leftMidSmallPanel.add(new JLabel("TIEMPO: "), SwingUtilities.CENTER);
-        leftMidSmallPanel.add(new JLabel("PUNTOS: "), SwingUtilities.CENTER);
-        leftMidSmallPanel.add(new JLabel("ACIERTOS: "), SwingUtilities.CENTER);
-        leftMidSmallPanel.add(new JLabel("TURNO: "), SwingUtilities.CENTER);
-        leftMidSmallPanel.add(new JLabel("JUGADOR: "), SwingUtilities.CENTER);
+        leftMidSmallPanel.setLayout(new GridLayout(0,4,5,5));
+        puntosLabel = new JLabel("PUNTOS: 0", JLabel.CENTER);
+        puntosLabel.setBorder(BorderFactory.createMatteBorder(2,4,2,4,Color.BLACK));
+        leftMidSmallPanel.add(puntosLabel);
+        turnosLabel = new JLabel("TURNO: 1", JLabel.CENTER);
+        turnosLabel.setBorder(BorderFactory.createMatteBorder(2,4,2,4,Color.BLACK));
+        leftMidSmallPanel.add(turnosLabel);
+        aciertosAguasLabel = new JLabel("ACIERTOS: 0/0", JLabel.CENTER);
+        aciertosAguasLabel.setBorder(BorderFactory.createMatteBorder(2,4,2,4,Color.BLACK));
+        leftMidSmallPanel.add(aciertosAguasLabel);
+        jugadorLabel = new JLabel("Jug. 1", JLabel.CENTER);
+        jugadorLabel.setBorder(BorderFactory.createMatteBorder(2,4,2,4,Color.BLACK));
+        leftMidSmallPanel.add(jugadorLabel);
+     
+        leftMidSmallPanel.setBorder(BorderFactory.createEtchedBorder(EtchedBorder.RAISED));
 		topLeftPanel.setLayout((new GridLayout(dimX,dimY,-1,-1)));
 		bottomLeftPanel.setLayout((new GridLayout(dimX,dimY,-1,-1)));
 		gridCoordsTop = (LabelGridCombate[][])Utilities.createGrid(dimX,dimY,topLeftPanel,1,null);
@@ -281,16 +335,48 @@ public class PanelCombate extends JPanel{
 		this.reconnectButton.setText(newText);
 	}
 	
+	public int getPuntos() {
+		return puntos;
+	}
+
+	public void setPuntos(int puntos) {
+		this.puntos = puntos;
+	}
+
+	public int getTurno() {
+		return turno;
+	}
+
+	public void setTurno(int turno) {
+		this.turno = turno;
+	}
+
+	public int getAciertos() {
+		return aciertos;
+	}
+
+	public void setAciertos(int aciertos) {
+		this.aciertos = aciertos;
+	}
+
+	public int getAguas() {
+		return aguas;
+	}
+
+	public void setAguas(int aguas) {
+		this.aguas = aguas;
+	}
+
 	public static void startNewCombat(PanelSituaBarcos situator, String IP, int port){
 		JFrame window = new JFrame("test combate");
-		PanelCombate content = new PanelCombate(9,9,situator, IP, port);
+		PanelCombate content = new PanelCombate(9,9,situator, IP, port, true);
 		window.setContentPane(content);
-		window.setPreferredSize(new Dimension(1100,700));
+		window.setPreferredSize(new Dimension(1100,800));
 		window.setVisible(true);
 		window.pack();
-		window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		window.getRootPane().setDefaultButton(content.chatButton);
-		content.startConnection("127.0.0.1", HLFServer.DEFAULTPORT);
+		content.startConnection();
 	}
 	
 	public static void main(String[] args){ /*codigo de testeo standalone*/
@@ -299,6 +385,10 @@ public class PanelCombate extends JPanel{
 		situator.drawSelBoatOnGrid(2,4,true); //Testing
 		PanelSituaBarcos.setTipoBarcoArrastrado(3);
 		situator.drawSelBoatOnGrid(5,2,true);
+		PanelSituaBarcos.setTipoBarcoArrastrado(1);
+		situator.drawSelBoatOnGrid(7,7,true);
+		PanelSituaBarcos.setTipoBarcoArrastrado(4);
+		situator.drawSelBoatOnGrid(7,2,true);
 		startNewCombat(situator,"127.0.0.1", 4522);
 		
 	}

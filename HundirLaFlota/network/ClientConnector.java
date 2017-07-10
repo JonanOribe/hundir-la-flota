@@ -17,12 +17,13 @@ import HundirLaFlota.gui.PanelCombate;
 
 public class ClientConnector extends ThreadedConnection{
 	
-	private boolean running = true;
+	private volatile boolean running = true;
 	private PanelCombate contenedor;
 	private String IP = "127.0.0.1";
 	private int port = HLFServer.DEFAULTPORT;
 	private long assignedGameID;
 	private int myPlayerNum;
+	private boolean halfTurn = false;
 	
 	public ClientConnector(PanelCombate contenedor, String IP, int port) {
 		this.contenedor = contenedor;
@@ -48,18 +49,18 @@ public class ClientConnector extends ThreadedConnection{
 				if (!(msg.equals(HLFServer.HANDSHAKETEXT))) {
 					HLFServer.log("wrong client handshake: " + msg); 
 					contenedor.writeInChat("Version de HLF obsoleta o con errores");
-					jugadorSeDesconecta(true);
+					jugadorSeDesconecta(true, false);
 					this.stopRunning();
 					break;
 				}
 				this.sendJoinGame();
-				jugadorSeDesconecta(false);
+				jugadorSeDesconecta(false, false);
 				this.start();
 				break;
 				}
 		}catch(java.net.ConnectException CE){
-			contenedor.writeInChat("Conexion al servidor rechazada.");
-			jugadorSeDesconecta(true);
+			contenedor.writeInChat("No se ha podido conectar al servidor.");
+			jugadorSeDesconecta(true, false); 
 			return;
 		}catch(Exception e){
 			//System.out.println("uhhh error: " + e.getMessage());
@@ -88,7 +89,7 @@ public class ClientConnector extends ThreadedConnection{
 				checkReceivedData(msg);
 			}
 		} catch(Exception e) {
-			//System.out.println("Error en la obtencion de datos: " + e.getMessage());
+			System.out.println("Error en la conexion con el servidor: " + e.getMessage());
 			stopRunning();
 		}
 	}
@@ -96,14 +97,16 @@ public class ClientConnector extends ThreadedConnection{
 	/*Actua en base a los comandos recibidos*/
 	private void checkReceivedData(String command){
 		try {
-			//System.out.println("--Client: received command on stream " + Arrays.toString(commands));
+			//System.out.println("--Client: received command on stream " + command);
 			String[] commands = command.trim().split(",");
-			//if (commands[0].equals("R")){
+			if (commands[0].equals("R")){
 				//contenedor.writeInChat("Connection check");
 				sendMsg("r", outgoingData);
-		//	}
+			}
 			if (commands[0].equals("start")){
 				contenedor.writeInChat("Dos jugadores conectados. Comenzando la partida!");
+				contenedor.setJugadorDC(false);
+				contenedor.jugadorLabel.setText("Jug. " + this.myPlayerNum);
 			}
 			else if (commands[0].equals("chat")) { //Win by default, other client d/ced...
 				int otherPlayerNum = (myPlayerNum == 1) ? 2:1;
@@ -111,32 +114,76 @@ public class ClientConnector extends ThreadedConnection{
 			}
 			else if (commands[0].equals("t")){
 				contenedor.writeInChat("Es tu turno.");
+				contenedor.jugadorLabel.setText("Jug. " + this.myPlayerNum +" (atacante)");
 			}
 			else if (commands[0].equals("nt")){
 				contenedor.writeInChat("Turno del oponente.");
+				contenedor.jugadorLabel.setText("Jug. " + this.myPlayerNum + " (defensor)");
 			}
-			else if (commands[0].equals("d/c")){
-				contenedor.writeInChat("Desconectando...");
+			else if (commands[0].equals("d/c") || commands[0].equals("timeout")){
+				String msg = (commands[0].equals("d/c")) ? "Desconectando..." : "Desconectado por inactividad...";
+				contenedor.writeInChat(msg);
 				closeAll();
 				this.stopRunning();
 				contenedor.writeInChat("Desconectado.");
-				jugadorSeDesconecta(true);
+				jugadorSeDesconecta(true, false);
 			}
 			else if (commands[0].equals("a")) {
 				//Primero comprueba si la posicion en la grid es barco o agua (y la misma funcion isAHit cambiara los graficos
 				//Y luego escribe en el chat y envia el mensaje correspondiente al servidor de si ha sido agua o tocado
 				String HorM = (contenedor.enemyAttacksPos(Integer.parseInt(commands[1]), Integer.parseInt(commands[2]))) ? "h":"m";
-				contenedor.writeInChat("El oponente ataco la posicion: " + ((char)('A' + Integer.parseInt(commands[1]) - 1)) + "," + commands[2]);
+				contenedor.writeInChat("El oponente ataca la posicion -> " + ((char)('A' + Integer.parseInt(commands[1]) - 1)) + "," + commands[2]);
 				sendMsg((HorM + "," + commands[1] + "," + commands[2]), outgoingData); //Aleatori per ara, en el futur comprovacions....
+				if (halfTurn) {
+					contenedor.setTurno(contenedor.getTurno() + 1);
+					contenedor.turnosLabel.setText("TURNO: " + contenedor.getTurno());
+					halfTurn = !halfTurn;
+				} else {
+					halfTurn = !halfTurn;
+				}
 			} 
 			else if (commands[0].equals("h") || commands[0].equals("m")) {
-				String result = (commands[0].equals("h")) ? "Tocado!" : "Agua!";  //!!!!!Hacer futura comprobacion de hundido (enviar tyh o algo para diferenciar)!!!!!!
-				contenedor.writeInChat("Resultados de mi ataque-> " + result);
+				int puntos;
+				String result;
+				boolean acierto;
+				if (commands[0].equals("h")) {
+					puntos = 1000;
+					result = "Tocado!"; 
+					acierto = true;
+				}else {
+					puntos = 100;
+					result = "Agua!"; 
+					acierto = false;
+				}
+				contenedor.writeInChat("Resultados de mi ataque en ("+((char)('A' + Integer.parseInt(commands[1]) - 1)) + "," + commands[2] + ") -> " + result);
 				//Dependiendo de si era agua o tocado cambiara los graficos en la label correspondiente del grid superior (donde estan los barcos enemigos)
 				contenedor.drawMyAttackResults(Integer.parseInt(commands[1]), Integer.parseInt(commands[2]), (commands[0].equals("h")));
+				if (acierto) { contenedor.setAciertos(contenedor.getAciertos() + 1); 
+				} else { contenedor.setAguas(contenedor.getAguas() +1); }
+				contenedor.setPuntos(contenedor.getPuntos() + puntos);
+				contenedor.aciertosAguasLabel.setText("ACIERTOS: " + contenedor.getAciertos() + "/" + contenedor.getAguas());
+				contenedor.puntosLabel.setText("PUNTOS: " + contenedor.getPuntos());
+				if (halfTurn){
+					contenedor.setTurno(contenedor.getTurno() + 1);
+					contenedor.turnosLabel.setText("TURNO: " + contenedor.getTurno());
+					halfTurn = !halfTurn;
+				} else {
+					halfTurn = !halfTurn;
+				}
 			}
 			else if (commands[0].equals("dcwin")) { //Win by default, other client d/ced...
 				contenedor.writeInChat("El oponente se desconecto. Has ganado!");
+				jugadorSeDesconecta(true, true);
+				this.stopRunning();
+			}
+			else if (commands[0].equals("win")){
+				contenedor.writeInChat("Has hundido la flota de tu oponente. Has ganado. Felicidades!");
+				jugadorSeDesconecta(true, true);
+				this.stopRunning();
+			}
+			else if (commands[0].equals("lose")){
+				contenedor.writeInChat("Tu oponente ha hundido todos tus barcos. Has perdido!");
+				jugadorSeDesconecta(true, true);
 				this.stopRunning();
 			}
 		} catch(Exception e){
@@ -146,16 +193,20 @@ public class ClientConnector extends ThreadedConnection{
 	
 	/*Funcion que cambia el texto de los botones por si el jugador aprieta el boton de desconectar/salir
 	 * o el de reconectar (si se desconecta -> salir (que cerrara el programa), si se reconecta -> desconectar)*/
-	private void jugadorSeDesconecta(boolean desconectando){
-		if (desconectando){
-			contenedor.cambiaReconnectButton("Reconectar");
-			contenedor.cambiaQuitButton("Salir");
-			contenedor.setJugadorDC(true);
+	private void jugadorSeDesconecta(boolean desconectando, boolean finPartida){
+		if (!finPartida){
+			if (desconectando){
+				contenedor.cambiaReconnectButton("Reconectar");
+				contenedor.cambiaQuitButton("Salir");
+			} else {
+				contenedor.cambiaQuitButton("Desconectar");
+				contenedor.cambiaReconnectButton(" ");
+			}
 		} else {
-			contenedor.cambiaQuitButton("Desconectar");
-			contenedor.cambiaReconnectButton(" ");
-			contenedor.setJugadorDC(false);
+			contenedor.cambiaQuitButton("Volver a jugar");
+			contenedor.cambiaReconnectButton("Volver al menu");
 		}
+		contenedor.setJugadorDC(true);
 	}
 	/*Funcion para hacer que los mensajes salientes hacia el servidor tengan el tipo correspondiente 
 	 * a la accion que llevan asociados */
@@ -177,8 +228,9 @@ public class ClientConnector extends ThreadedConnection{
 			String[] msgValues = msg.trim().split(",");
 			String player = " como Jugador 2.";
 			this.assignedGameID = Long.parseLong(msgValues[0]);
+			contenedor.setJugadorDC(false);
 			myPlayerNum = 2;
-			if (msgValues[1].equals("1")) { player = " como Jugador 1."; myPlayerNum = 1;}
+			if (msgValues[1].equals("1")) { player = " como Jugador 1, esperando a un oponente..."; myPlayerNum = 1;}
 			contenedor.writeInChat("Conectado a partida con ID " + msgValues[0] + player); //assignar reconnect token en el futur?
 		} catch (Exception e){
 			System.out.println("ID asignada equivocada " + e.getMessage());

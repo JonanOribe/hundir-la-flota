@@ -18,6 +18,7 @@ public class HLFServer extends Thread{
 	private static long actualGameId;
 	private static ArrayList<GameHandlerThread> concurrentGames = new ArrayList<GameHandlerThread>(); //Asigna a cada gameId un objeto GameHandlerThread que controla el progreso de la partida
 	private static boolean debug = true; //Para mensajes sobre la ejecucion y progreso partidas
+	public static final int TOTALSHIPPOSITIONS = 10; // Canviar depenent dels vaixells kes posin...
 	
 	public HLFServer(int customPort) {
 		actualGameId = 0;
@@ -45,6 +46,8 @@ public class HLFServer extends Thread{
 
 			log("Listening for connections...");
 			GameAssigner GA = new GameAssigner();
+			ConnReaperThread reaperThread = new ConnReaperThread();
+			reaperThread.start();
 			while (running){
 					clientConn = listener.accept();
 					if (!GA.openConnection(clientConn)) { continue; }
@@ -67,6 +70,7 @@ public class HLFServer extends Thread{
 					}
 			}
 			listener.close();
+			reaperThread.stopExecution();
 			close();
 		} catch(Exception e) {
 			System.out.println("Error en la conexion con los clientes: " + e.getMessage());
@@ -149,10 +153,15 @@ public class HLFServer extends Thread{
 		if (debug){	System.out.println(text); }
 	}
 	
+	public static synchronized ArrayList<GameHandlerThread> getGames(){
+		return concurrentGames;
+	}
+	
 	/*Lista los juegos ejecutandose ahora mismo y el turno que hay*/
 	public static void listGames() {
-		for (int i = 0; i < concurrentGames.size(); i++){
-			log(concurrentGames.get(i).toString());
+		ArrayList<GameHandlerThread> games = getGames();
+		for (int i = 0; i < games.size(); i++){
+			log(games.get(i).toString());
 		}
 	}
 	

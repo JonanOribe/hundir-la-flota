@@ -24,6 +24,9 @@ import HundirLaFlota.network.HLFServer;
  * FALTA TAMBIEN MEJORAR LA GUI (chapuzera por ahora, poner cosas bonitas, que haya conexion entre las ventanas ya que
  * por ahora es super tenue (si le doy a salir que vaya al menu principal etc.)
  * Y SEGURO QUE ALGO MAS
+ * 
+ * <<<<LO MAS IMPORTANTE: QUE EL SERVIDOR NO SE FIE DEL HIT OR MISS DEL PANEL, QUE PRIMERO LOS JUGADORES ENVIEN LAS POSICIONES
+ * SE COMPRUEBE QUE SON EL NUMERO QUE TOCAN Y LUEGO LA PARTIDA DIGA SI ES HIT OR MISS>>>>>>>>>>>>>>>
  */
 @SuppressWarnings("serial")
 public class MenuInicial extends JPanel implements ActionListener{
@@ -69,7 +72,7 @@ public class MenuInicial extends JPanel implements ActionListener{
 			JButton src = (JButton)e.getSource();
 			JFrame window = (JFrame)src.getTopLevelAncestor();
 			window.dispose();
-			PanelSituaBarcos.createNewPSBWindow("127.0.0.1",HLFServer.DEFAULTPORT);
+			PanelSituaBarcos.createNewPSBWindow("127.0.0.1",HLFServer.DEFAULTPORT, createdServer);
 		}
 		else if (cmd.equals("Jugar por internet")){
 			String[] chosenIPPort = Utilities.createCustomDialog(new JFrame(""), 1);
@@ -83,7 +86,7 @@ public class MenuInicial extends JPanel implements ActionListener{
 			JButton src = (JButton)e.getSource();
 			JFrame window = (JFrame)src.getTopLevelAncestor();
 			window.dispose();
-			PanelSituaBarcos.createNewPSBWindow(chosenIPPort[0], Integer.parseInt(chosenIPPort[1]));
+			PanelSituaBarcos.createNewPSBWindow(chosenIPPort[0], Integer.parseInt(chosenIPPort[1]), createdServer);
 			
 		}
 	}

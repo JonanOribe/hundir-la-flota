@@ -16,7 +16,7 @@ public class textInputArea extends JTextArea{
 	
 	private static final long serialVersionUID = 1L;
 	private static final String DEFAULTTEXT = "...";
-	private static final int MAXROWS = 4;
+	private static final int MAXROWS = 3;
 	private static final int MAXCOLS = 40;
 	private static PanelCombate contenedor;
 	

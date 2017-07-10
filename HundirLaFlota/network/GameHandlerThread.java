@@ -8,16 +8,20 @@ import java.net.Socket;
 public class GameHandlerThread extends Thread{
 	
 
-	private PlayerGameIntermediator P1Listener;
-	private PlayerGameIntermediator P2Listener;
+    PlayerGameIntermediator P1Listener;
+	PlayerGameIntermediator P2Listener;
 	long gameID;
 	int turn = 0;
 	int actualPlayer;
-	static String[] legalCommands = {"a","d/c","h","m","d/c","chat","r","R"};
+	private int player1Hits = 0;
+	private int player2Hits = 0;
+	static String[] legalCommands = {"a","d/c","h","m","d/c","chat","r","R","start","timeout","win","dcwin","lose"};
 	static String[] legalActions = {"a","d/c","chat"};
 	static String[] legalResponses = {"h","m","d/c","chat"};
-	boolean running = true;
+	volatile boolean running = true;
 	int waitingForRC = 0;
+	boolean player1Acted = true;
+	boolean player2Acted = true;
 	
 	public GameHandlerThread(long gameID, Socket P1Conn){ 
 		P1Listener = new PlayerGameIntermediator(this, 1,P1Conn);
@@ -45,7 +49,7 @@ public class GameHandlerThread extends Thread{
 	 */
 	public void run() {
 			HLFServer.log("Starting game - notifying clients");
-			checkForDCPlayers(false);
+			checkForDCPlayers(false, false);
 			PlayerGameIntermediator.sendMsg("start", P2Listener.outgoingData);
 			PlayerGameIntermediator.sendMsg("start", P1Listener.outgoingData);
 			try { sleep(500);} catch(Exception e){}
@@ -66,7 +70,7 @@ public class GameHandlerThread extends Thread{
 	 * ser atacado. Si lo es se lo envia al otro jugador para que responda*/
 	private int parseCommands(String command, boolean isPlayerTurn, int playerNum){
 		if (command == null) { //El player se ha desconectado de manera involuntaria...
-			checkForDCPlayers(false);
+			checkForDCPlayers(false, false);
 			return -1;
 		}
 		String[] commandData = command.trim().split(",");
@@ -100,22 +104,38 @@ public class GameHandlerThread extends Thread{
 	public synchronized void playerCommandInterrupt(String command, int fromPlayer) {
 		int todo = parseCommands(command, (fromPlayer == actualPlayer), fromPlayer);
 		HLFServer.log(thisGameID() + "received data from player " + fromPlayer + ": " + command +" , its code is: " + todo);
-		//String[] commandParts;
+		if (fromPlayer == 1) { player1Acted = true; }
+		if (fromPlayer == 2) { player2Acted = true; }
 		PlayerGameIntermediator mediator;
 		switch (todo) {
 		case 0: //d/c
 			mediator = (fromPlayer == 1) ? P1Listener : P2Listener;
-			disconnectPlayer(mediator);
-			checkForDCPlayers(true);
+			disconnectPlayer(mediator,false);
+			checkForDCPlayers(true, false);
 			break;
 		case 1: //chat
 		case 2: //a (when you're allowed to use a, else you go to -1)
 			mediator = (fromPlayer == 1) ? P2Listener : P1Listener;
 			mediator.sendCommandToPlayer(command);
 			break;
-		case 3: //h ("                                             ")
+		case 3: //h / m       
 			mediator = (fromPlayer == 1) ? P2Listener : P1Listener;
 			mediator.sendCommandToPlayer(command);
+			if (command.substring(0,1).equals("h")){
+				if (fromPlayer == 2){ 
+					this.player1Hits += 1;
+					HLFServer.log("loL? " + player1Hits);
+					if (player1Hits >= HLFServer.TOTALSHIPPOSITIONS) {
+						assignWinner(1,false);
+					}
+				} else { 
+					this.player2Hits += 1; 
+					HLFServer.log("loL 2? " + player2Hits);
+					if (player2Hits >= HLFServer.TOTALSHIPPOSITIONS) {
+						assignWinner(2,false);
+					}
+				}
+			}
 			try{ sleep(500);} catch(Exception e){}
 			cyclePlayers(); //We got an attack -> hit or miss cycle complete, next player can choose a position now...
 			break;
@@ -138,11 +158,12 @@ public class GameHandlerThread extends Thread{
 	
 	/*Funcion para desconectar la conexion que mantiene el intermediario con el jugador
 	 * (efectivamente desconectandolo de la partida) */
-	private void disconnectPlayer(PlayerGameIntermediator thisPlayer){
-		thisPlayer.sendCommandToPlayer("d/c");
+	void disconnectPlayer(PlayerGameIntermediator thisPlayer, boolean timedOut){
+		String msg = (timedOut) ? "timeout" : "d/c";
+		thisPlayer.sendCommandToPlayer(msg);
+		try{ sleep(500);} catch(Exception e){}
 		thisPlayer.closeAll();
 		thisPlayer.resetBuffer();
-		try{ sleep(500);} catch(Exception e){}
 	}
 
 	/*Pasa al siguiente jugador, avanza turno si ya se ha producido un 
@@ -170,16 +191,44 @@ public class GameHandlerThread extends Thread{
 	 * se active, se envie el comando al intermediario y este active la funcion de interrupcion por timer
 	 * (vamos que si ha sido deliberado asigna ganador, si no espera 60s y si no se ha reconectado asigna ganador (ESTO
 	 * HAY QUE IMPLEMENTARLO), si los dos estan desconectados finaliza la partida	 */
-	protected int checkForDCPlayers(boolean onPurpose){
+	protected void checkForDCPlayers(boolean dcedOnPurpose, boolean reaperCheck){
 		int playersDCed = whoDCed();
 		waitingForRC = playersDCed;
-		if (playersDCed > 0) { 
-			if (playersDCed == 1) { HLFServer.log(thisGameID() + "C1 DISCONNECTED"); if (onPurpose) {gameEndCheck(1);}}//Nomes C1 desconnectat
-			else if(playersDCed == 2) { HLFServer.log(thisGameID() + "C2 DISCONNECTED");  if (onPurpose) {gameEndCheck(2);} } //Nomes C2 desconnectat
-			else { HLFServer.log(thisGameID() + "BOTH PLAYERS DISCONNECTED"); gameEndCheck(3);}//Cap                                                                   connectat.
-			return playersDCed;
+		if (!running) { return; }
+		if (playersDCed > 0) { //Si hay jugadores desconectados...
+			if (playersDCed < 3) {
+				if (dcedOnPurpose) {
+					gameEnded(playersDCed);
+				} 
+			}
+			else { 
+				HLFServer.log(thisGameID() + "BOTH PLAYERS DISCONNECTED"); gameEnded(3); 
+			}
+			return;
 		}
-		return 0;
+		//Comprovacion inactividad en enviar comandos, no en la conexion...
+		int dcValue = 0;
+		if (reaperCheck){
+			if (player1Acted) {
+				player1Acted = false;
+				HLFServer.log(thisGameID() +"player 1 hasnt acted in a while");
+			} else {
+				disconnectPlayer(P1Listener, true);
+				HLFServer.log(thisGameID() +"player 1 hasnt acted in too long. disconnecting");
+				dcValue += 1;
+			}
+			if (player2Acted) {
+				player2Acted = false;
+				HLFServer.log(thisGameID() +"player 2 hasnt acted in a while");
+			} else {
+				disconnectPlayer(P2Listener, true);
+				HLFServer.log(thisGameID() +"player 2 hasnt acted in too long. disconnecting");
+				dcValue += 2;
+			}
+		}
+		if (dcValue > 0){
+			gameEnded(dcValue);
+		}
 	}
 	
 	/*Funcion que comprueba si hay jugadores desconectados mirando sus canales de entrada/salida*/
@@ -225,15 +274,11 @@ public class GameHandlerThread extends Thread{
 	 * cliente y llamara a esta funcion...	 */
 	public void timerCheck() {
 		HLFServer.log(thisGameID() + "Timer fired...");
-		int dcer = checkForDCPlayers(false);
-		if (dcer > 0){
-			//Han pasado (timerdelay) segundos y hay alguien desconectado... 
-			gameEndCheck(dcer);
-		}
+		checkForDCPlayers(false, true);
 	}
 	
 	/*Hay que expandir esta funcion para anyadir ganar por puntos, asigna ganadores y termina la ejecucion del programa..*/
-	private void gameEndCheck(int whoDCed){
+	private void gameEnded(int whoDCed){
 		int winner = 0;
 		if (whoDCed == 1) { winner = 2; }
 		else if (whoDCed == 2) { winner = 1;}
@@ -260,16 +305,22 @@ public class GameHandlerThread extends Thread{
 	/*Asigna el ganador de la partida, hay que expandirla para ganar por mas barcos destruidos...*/
 	private void assignWinner(int winner, boolean dcWin){
 		String msg =  (dcWin) ? "dcwin":"win";
-		if (winner == 1 && P1Listener != null ) { PlayerGameIntermediator.sendMsg(msg, P1Listener.outgoingData); } 
-		else if (winner == 2 && P2Listener != null) { PlayerGameIntermediator.sendMsg(msg, P2Listener.outgoingData); }  //Si es diferente no habra winner (los dos se desconectan wtf... o cambiar
-		if (winner == 1 || winner == 2) { HLFServer.log(thisGameID() + "Winner is player: " + winner); }
+		PlayerGameIntermediator winnerP = (winner == 1) ? P1Listener : P2Listener;
+		PlayerGameIntermediator loserP = (winner == 1) ? P2Listener : P1Listener;
+		if (winnerP != null) { 
+			PlayerGameIntermediator.sendMsg(msg, winnerP.outgoingData);
+		}
+		if (loserP != null){
+			PlayerGameIntermediator.sendMsg("lose", loserP.outgoingData);
+		}
+		if (winner == 1 || winner == 2) { HLFServer.log(thisGameID() + "WINNER IS PLAYER: " + winner); }
 		else { HLFServer.log(thisGameID() + "Both players quit!!!"); }
 		if (P1Listener != null) {
-			disconnectPlayer(P1Listener);
+			disconnectPlayer(P1Listener,true);
 			P1Listener = null;
 		}
 		if (P2Listener != null) {
-			disconnectPlayer(P2Listener);
+			disconnectPlayer(P2Listener,true);
 			P2Listener = null;
 		}
 		this.closeAll();

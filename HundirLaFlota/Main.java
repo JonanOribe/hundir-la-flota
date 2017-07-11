@@ -50,7 +50,7 @@ public class Main {
 			System.out.println("");
 
 			System.out.println("                    ============= ");
-			System.out.println("                   |    -MENÚ-   |");
+			System.out.println("                   |    -MENU-   |");
 			System.out.println("                    ============= ");
 
 			System.out.println("                    ------------- ");
@@ -67,7 +67,7 @@ public class Main {
 			System.out.println("                    ------------- ");
 			System.out.println("");
 
-			// Llamada a pideEntero para seleccionar opción del menú
+			// Llamada a pideEntero para seleccionar opcion del menu
 			opcion = pedirOpcion("Por favor, introduce una de las opciones del menú:");
 			switch (opcion) {
 			case 1: {
@@ -80,6 +80,7 @@ public class Main {
 				break;
 			}
 			case 3: {
+				//�Este campo es realmente necesario?
 				;
 				break;
 			}
@@ -96,7 +97,7 @@ public class Main {
 	}
 	// ----------------------------------------------------------------------------------------------------------------------------------
 
-	// FUNCIÓN pedirOpcion:
+	// FUNCION pedirOpcion:
 
 	/*
 	 * Función que muestra por consola una pregunta como parámetro. Se pide un

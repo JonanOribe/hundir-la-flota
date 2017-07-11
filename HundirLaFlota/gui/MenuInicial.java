@@ -88,6 +88,12 @@ public class MenuInicial extends JPanel implements ActionListener{
 			window.dispose();
 			PanelSituaBarcos.createNewPSBWindow(chosenIPPort[0], Integer.parseInt(chosenIPPort[1]), createdServer);
 			
+		}else if(cmd.equals("Jugar contra la AI")){
+			JButton src = (JButton)e.getSource();
+			JFrame window = (JFrame)src.getTopLevelAncestor();
+			window.dispose();
+			PanelSituaBarcos.createNewPSBWindow("127.0.0.1",HLFServer.DEFAULTPORT, createdServer);
+			
 		}
 	}
 	

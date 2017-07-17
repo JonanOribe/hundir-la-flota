@@ -20,26 +20,18 @@ public class PanelSituaBarcos extends JPanel{
 	private static int tipoBarcoArrastrado;
 	private static boolean horizontal = true;  //Dibuja los barcos (no permanentemente dibujados) en horiz/vertical
 	private static boolean acceptedPos = false; 
-	public static final int dimX = 9; //Dimensiones del grid de posiciones (sera la real +1 por el extra de numeros/letras asi que 8 (9) default)
-	public static final int dimY = 9;
-	private String chosenIP; //For playing MP...
-	private int chosenPort;
+	public static final int DIMX = 9; //Dimensiones del grid de posiciones (sera la real +1 por el extra de numeros/letras asi que 8 (9) default)
+	public static final int DIMY = 9;
 	private LabelGridBarcos[][] topGrid; //Referencia al grid de arriba con las posiciones deseadas de los barcos
 	private JButton BotonAceptar;
 	
-	public PanelSituaBarcos(){
+	public PanelSituaBarcos(boolean singlePlayer){
 		super();
-		initComponents();
-	}
-	
-	public PanelSituaBarcos(String IP, int port){
-		this();
+		initComponents(singlePlayer);
 		tipoBarcoArrastrado = 0;
-		this.chosenIP = IP;
-		this.chosenPort = port;
 	}
                       
-	   	private void initComponents() {
+	   	private void initComponents(boolean singlePlayer) {
 			LabelGridBarcos.setContainer(this);	
 
 	    	flota = new LabelTipoBarco[4];
@@ -83,7 +75,22 @@ public class PanelSituaBarcos extends JPanel{
        	    		JButton src = (JButton)e.getSource();
        	    		JFrame contenedor = (JFrame)src.getTopLevelAncestor();
        	    		PanelSituaBarcos thisPanel = (PanelSituaBarcos)contenedor.getContentPane();
-       	    		PanelCombate.startNewCombat(thisPanel, chosenIP, chosenPort);
+       	    		if (singlePlayer) { //Llegaremos aqui si el usuario ha elegido 1 jugador contra la AI...
+       	    			
+       	    			
+       	    			/*CAMBIAR ESTO PARA EL SINGLE PLAYER YA QUE LA GUI NO SERA LA MISMA, NO SE NECESITA
+       	    			 * NI CHAT NI NADA. ESTO FUNCIONA Y NO CONECTA AL SERVER PERO LA GUI ES LA DE MP
+       	    			 * POR LO QUE ESTARAN LOS BOTONES DE RECONECTAR ETC. 
+       	    			 * HABRIA QUE CAMBIAR EL CONSTRUCTOR, O CREAR UN PANELCOMBATE DIFERENTE DIRECTAMENTE PARA 1 JUGADOR
+       	    			 * YA SEA CAMBIANDO BOTONES/ELIMINANDO CHAT/PONIENDO EN PANELCOMBATEEVENTHANDLER LO K TOKE
+       	    			 */
+       	    			
+       	    			
+       	    			PanelCombate.startNewCombat(thisPanel);
+       	    		}
+       	    		else {
+       	    			PanelCombate.startNewCombat(thisPanel, false);
+       	    		}
        	    		contenedor.dispose();
        	    	}
 	        });
@@ -186,9 +193,9 @@ public class PanelSituaBarcos extends JPanel{
 			/*for (int i = 0; i < 12; i++){
 				PanelBarcos.add(new JLabel("BARCO"));
 			}*/
-			PanelGrid.setLayout(new GridLayout(dimX,dimY,-1,-1));
+			PanelGrid.setLayout(new GridLayout(DIMX,DIMY,-1,-1));
 			
-			topGrid = (LabelGridBarcos[][])Utilities.createGrid(dimX,dimY, PanelGrid,0,null);
+			topGrid = (LabelGridBarcos[][])Utilities.createGrid(DIMX,DIMY, PanelGrid,0,null);
 			
 	    }
 	
@@ -214,8 +221,8 @@ public class PanelSituaBarcos extends JPanel{
 	 * esto podriamos eliminar la variable estatica acceptedPos pero ehhhh*/
 	public boolean drawSelBoatOnGrid(int firstGridRow, int firstGridCol, boolean drawPermanently){
 		int i, counter, tmp, dim, draw;
-		if (horizontal) { tmp = firstGridCol;  dim = dimX;  }
-		else { tmp = firstGridRow; dim = dimY; }
+		if (horizontal) { tmp = firstGridCol;  dim = DIMX;  }
+		else { tmp = firstGridRow; dim = DIMY; }
 		i = tipoBarcoArrastrado-1;
 		lastLabelsDrawn = new LabelGridBarcos[tipoBarcoArrastrado];
 		lastLabelsDrawn[0] = topGrid[firstGridRow-1][firstGridCol-1];
@@ -338,21 +345,21 @@ public class PanelSituaBarcos extends JPanel{
 	}
 	/*Bckground stuff determina si se ha creado un servidor no dedicado por lo que no 
 	 * debemos cerrar todo al cerrar la ventana. (buscar otros metodos) */
-	public static JFrame createNewPSBWindow(String IP, int port, boolean bkgStuff){
+	public static JFrame createNewPSBWindow(boolean singlePlayer, boolean bkgServer){
 		JFrame window = new JFrame("Posiciona tus barcos");
-		PanelSituaBarcos content = new PanelSituaBarcos(IP, port);
+		PanelSituaBarcos content = new PanelSituaBarcos(singlePlayer);
 		window.setContentPane(content);
 		window.setResizable(false);
-		if (!bkgStuff) window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		if (!bkgServer) window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		//window.setPreferredSize(new Dimension(700,700));
 		window.setVisible(true);
 		window.pack();
 		return window;
 	}
-
+	
 	public static void main(String[] args){
 		JFrame window = new JFrame("test");
-		PanelSituaBarcos content = new PanelSituaBarcos();
+		PanelSituaBarcos content = new PanelSituaBarcos(false);
 		window.setContentPane(content);
 		window.setResizable(false);
 		//window.setPreferredSize(new Dimension(700,700));

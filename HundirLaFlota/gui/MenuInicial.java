@@ -34,16 +34,13 @@ public class MenuInicial extends JPanel implements ActionListener{
 	private boolean createdServer = false; //El control si existe ya un servidor deberia ser mayor...
 	
 	public MenuInicial(){
-		JPanel mainPanel = Utilities.createCustomJPanel(null, 1, this,"Jugar contra la AI", "Jugar en LAN", "Jugar por internet", "Crear un servidor", "Crear un servidor dedicado");
+		JPanel mainPanel = Utilities.createCustomJPanel(null, 1, this,"Jugar contra la AI", "Multijugador", "Crear un servidor", "Crear un servidor dedicado");
 		this.add(mainPanel);
 	}
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
-		String cmd = e.getActionCommand();
-		
-		/*Faltara implementar partidas para 1 Jugador contra la maquina sin usar el server ni naaaa*/
-		
+		String cmd = e.getActionCommand();		
 		
 		if (!createdServer && (cmd.equals("Crear un servidor dedicado") || cmd.equals("Crear un servidor"))){
 			String[] chosenIPPort = Utilities.createCustomDialog(new JFrame(""), 0);
@@ -68,31 +65,16 @@ public class MenuInicial extends JPanel implements ActionListener{
 				server.listenForClients();
 			}
 		}
-		else if (cmd.equals("Jugar en LAN")) {
+		else if (cmd.equals("Multijugador")) {
 			JButton src = (JButton)e.getSource();
 			JFrame window = (JFrame)src.getTopLevelAncestor();
 			window.dispose();
-			PanelSituaBarcos.createNewPSBWindow("127.0.0.1",HLFServer.DEFAULTPORT, createdServer);
-		}
-		else if (cmd.equals("Jugar por internet")){
-			String[] chosenIPPort = Utilities.createCustomDialog(new JFrame(""), 1);
-			
-			if (chosenIPPort == null) {return;} 
-			
-			//Control de errores minimo... esto habria que cambiarlo
-			if (chosenIPPort[0].equals("")) { chosenIPPort[0] = "127.0.0.1"; }
-			if (chosenIPPort[1].equals("")) { chosenIPPort[1] = Integer.toString(HLFServer.DEFAULTPORT); }
-			
-			JButton src = (JButton)e.getSource();
-			JFrame window = (JFrame)src.getTopLevelAncestor();
-			window.dispose();
-			PanelSituaBarcos.createNewPSBWindow(chosenIPPort[0], Integer.parseInt(chosenIPPort[1]), createdServer);
-			
+			PanelSituaBarcos.createNewPSBWindow(false, createdServer);
 		}else if(cmd.equals("Jugar contra la AI")){
 			JButton src = (JButton)e.getSource();
 			JFrame window = (JFrame)src.getTopLevelAncestor();
 			window.dispose();
-			PanelSituaBarcos.createNewPSBWindow("127.0.0.1",HLFServer.DEFAULTPORT, createdServer);
+			PanelSituaBarcos.createNewPSBWindow(true, createdServer);
 			
 		}
 	}

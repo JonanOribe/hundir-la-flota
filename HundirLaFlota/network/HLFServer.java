@@ -3,7 +3,6 @@ package HundirLaFlota.network;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 /*Clase que hace de servidor para partidas de Hundir la Flota. Su funcion es escuchar por conexiones entrantes, comprobar que sean clientes de HLF y asignarles
  * la partida que desean. Una vez son dos jugadores en una partida esta comienza y se ejecuta de manera independiente al servidor (thread) mientras este
@@ -13,12 +12,15 @@ public class HLFServer extends Thread{
 	
 	static final String HANDSHAKETEXT = "HLF"; //TEXTO QUE ENVIARAN TANTO EL CLIENTE COMO EL SERVIDOR EL UNO AL OTRO PARA SABER QUE SE ESTAN COMUNICANDO ENTRE SI Y NO ES UN PROGRAMA ALEATORIO
 	public static final int DEFAULTPORT = 4522;
+	public static final long MAXAMOUNTFORPUBLICGAMES = 100000000; //Pueden haber estas partidas publicas (por encima seran privadas)
+	public static final long MAXGAMEID = 999999999; 
+	public static final int TOTALSHIPPOSITIONS = 10; // Canviar depenent dels vaixells kes posin...
+
 	private int port;
 	private boolean running = true;
 	private static long actualGameId;
 	private static ArrayList<GameHandlerThread> concurrentGames = new ArrayList<GameHandlerThread>(); //Asigna a cada gameId un objeto GameHandlerThread que controla el progreso de la partida
 	private static boolean debug = true; //Para mensajes sobre la ejecucion y progreso partidas
-	public static final int TOTALSHIPPOSITIONS = 10; // Canviar depenent dels vaixells kes posin...
 	
 	public HLFServer(int customPort) {
 		actualGameId = 0;
@@ -45,30 +47,13 @@ public class HLFServer extends Thread{
 			Socket clientConn;
 
 			log("Listening for connections...");
-			GameAssigner GA = new GameAssigner();
 			ConnReaperThread reaperThread = new ConnReaperThread();
 			reaperThread.start();
 			while (running){
 					clientConn = listener.accept();
-					if (!GA.openConnection(clientConn)) { continue; }
-					if (!GA.performHandshake()) { continue; }
-					long[] playerAction = GA.playerIntention();
-					switch ((int)playerAction[0]){
-						case 0:
-							GA.assignPlayerToGame((playerAction[1] != 0), playerAction[1]); //join game
-							break;
-						case 1:
-							reconnectUser(true, playerAction[1], clientConn); //rejoin as P1
-							break;
-						case 2:
-							reconnectUser(false, playerAction[1], clientConn); //rejoin as P2
-							break;
-						case 3:
-							break;
-						default:
-							log("Unknown response to: " + Arrays.toString(playerAction));
-					}
-			}
+					GameAssigner GA = new GameAssigner(clientConn);
+					GA.start();
+			}					
 			listener.close();
 			reaperThread.stopExecution();
 			close();
@@ -86,7 +71,7 @@ public class HLFServer extends Thread{
 	/*Funcion para retornar la siguiente partida publica vacia*/
 	public static synchronized GameHandlerThread nextEmptyPublicGame(){
 		for (int i = 0; i < concurrentGames.size(); i++){
-			if (concurrentGames.get(i).gameID <= actualGameId) {  //Si es una partida publica (no tiene una custom gameID...)
+			if (concurrentGames.get(i).getGameID() <= actualGameId) {  //Si es una partida publica (no tiene una custom gameID...)
 				if (!concurrentGames.get(i).hasP2()) { 
 					return concurrentGames.get(i);
 				}
@@ -99,7 +84,7 @@ public class HLFServer extends Thread{
 	/*Elimina una partida de la array de partidas en ejecucion*/
 	public static void finishGame(long gameID){
 		for (int i = 0; i < concurrentGames.size(); i++){
-			if (concurrentGames.get(i).gameID == gameID) {
+			if (concurrentGames.get(i).getGameID() == gameID) {
 				log("Finishing game with ID: "+ gameID);
 				concurrentGames.remove(i);
 			}
@@ -109,7 +94,7 @@ public class HLFServer extends Thread{
 	/*Devuelve la partida con gameID determinada*/
 	public static synchronized GameHandlerThread findCustomGame(long cGameID){ //Se podria crear una lista de partidas publicas i una de privadas para hacer mas rapida esta buskeda...?
 		for (int i = 0; i < concurrentGames.size(); i++){
-			if (concurrentGames.get(i).gameID == cGameID) {  //Si es una partida publica (no tiene una custom gameID...)
+			if (concurrentGames.get(i).getGameID() == (cGameID + MAXAMOUNTFORPUBLICGAMES)) {  
 				if (!concurrentGames.get(i).hasP2()) { 
 					return concurrentGames.get(i);
 				}
@@ -129,12 +114,14 @@ public class HLFServer extends Thread{
 		GameHandlerThread newGame = new GameHandlerThread(actualGameId++, playerConn);
 		concurrentGames.add(newGame);
 		log("Assigning player to new game: " + (actualGameId-1) + ", gameId is now: " + actualGameId);
+		if (actualGameId >= MAXAMOUNTFORPUBLICGAMES) { actualGameId = 0; } //reinicializamos el numero de las partidas publicas
 	}
 	
-	/*Crea una nueva partida custom (con un gameID del orden de 4000000+, esta es la teoria pero es facil hacer que 
+	/*Crea una nueva partida custom (con un gameID del orden de 10000000+, esta es la teoria pero es facil hacer que 
 	 * se acepten letras tambien (FUTURO supongo mas que nada para future proof)	 */
 	public static synchronized void createNewCustomGame(long cGameID, Socket playerConn){
-		GameHandlerThread newGame = new GameHandlerThread(cGameID, playerConn);
+		if(cGameID + MAXAMOUNTFORPUBLICGAMES == getHighestNonOccupiedGameID()) { cGameID++;} //Las partidas privadas deben estar por encima del numero maximo de publicas para que no haya colisiones (eso o hacer dos listas...)
+		GameHandlerThread newGame = new GameHandlerThread((cGameID + MAXAMOUNTFORPUBLICGAMES), playerConn);
 		concurrentGames.add(newGame);
 		log("Assigning player to new custom game with ID: " + cGameID);
 	}
@@ -142,7 +129,7 @@ public class HLFServer extends Thread{
 	/*Funcion para reconectar a un usuario a una partida con gameID determinada*/
 	public static void reconnectUser(boolean isP1, long gameID, Socket conn){
 		for (int i = 0; i < concurrentGames.size(); i++){
-			if (concurrentGames.get(i).gameID == gameID) {  //Si es una partida publica (no tiene una custom gameID...)
+			if (concurrentGames.get(i).getGameID() == gameID) {  //Si es una partida publica (no tiene una custom gameID...)
 				concurrentGames.get(i).reconnectUser(isP1, conn);
 				}
 			}
@@ -157,6 +144,17 @@ public class HLFServer extends Thread{
 		return concurrentGames;
 	}
 	
+	public static synchronized long getHighestNonOccupiedGameID(){
+		long max = 0;
+		if (concurrentGames.size() == 0) { return max; }
+		for (int i = 0; i < concurrentGames.size(); i++){
+				if (concurrentGames.get(i).getGameID() > max) {
+					max = concurrentGames.get(i).getGameID();
+				}
+		}
+		return max;
+	}
+	
 	/*Lista los juegos ejecutandose ahora mismo y el turno que hay*/
 	public static void listGames() {
 		ArrayList<GameHandlerThread> games = getGames();
@@ -169,6 +167,8 @@ public class HLFServer extends Thread{
 	public void close(){
 		running = false;
 	}
+	
+	/*Codigo de testeo standalone (sin usar threads) */
 	
 	public static void main(String[] args){
 		//System.out.println(System.getProperty("user.dir"));

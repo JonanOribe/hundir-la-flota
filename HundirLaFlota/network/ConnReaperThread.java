@@ -15,12 +15,12 @@ public class ConnReaperThread extends Thread{
 		try {
 			while(running){
 				sleep(WAKEUPMILLIS);
-				//HLFServer.log("Waking up, generating a DC check...");
+				HLFServer.log("--Reaper thread: Waking up, generating an inactivity check...");
 				ArrayList<GameHandlerThread> games = HLFServer.getGames();
 				if (games == null) { continue;}
 				for (int i = 0; i < games.size(); i++){
 					if (games.get(i).hasP2()){ //Solo comprueba cuando los dos jugadores estan dentro
-						games.get(i).checkForDCPlayers(false, true);
+						GameLogic.checkForDCPlayers(false, true, games.get(i)); //Pueden haber problemas de sync aki...?
 					}
 				}
 			}

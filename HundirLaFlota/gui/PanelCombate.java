@@ -13,11 +13,11 @@ import javax.swing.border.EtchedBorder;
 import HundirLaFlota.ai.BoatHandling;
 import HundirLaFlota.misc.Utilities;
 import HundirLaFlota.network.ClientConnector;
-import HundirLaFlota.network.HLFServer;
 
 /*Panel que contendra los paneles con la grid del usuario y un contrincante y gestionara
  * la comunicacion entre estos 
- * Agregar checkeo al cerrar ventana para cerrar el conector tb*/
+ * Agregar checkeo al cerrar ventana para cerrar el conector tb, hay que poner
+ * un windowAdapter al eventHandler...*/
 @SuppressWarnings("serial")
 public class PanelCombate extends JPanel{
 	
@@ -25,7 +25,8 @@ public class PanelCombate extends JPanel{
 	static final String DEFAULTPREFIX = ">> ";   //Prefijo que se antepondra a los mensajes de chat
 	private PanelCombateActionHandler eventHandler;
 	private String chosenIP;
-	private int chosenPort;
+	private int chosenPort = 0;
+	private long chosenGameID;
 	private boolean jugadorDC;
 
 	private int puntos = 0;
@@ -48,48 +49,26 @@ public class PanelCombate extends JPanel{
     public JLabel turnosLabel;
     public JLabel aciertosAguasLabel;
     public JLabel jugadorLabel;
-    
-    /*Constructor para 1 jugador sin conector*/
-	public PanelCombate(int dimX, int dimY, PanelSituaBarcos ancestor){
-		this(dimX,dimY,ancestor,false);
-	}
-    
-	public PanelCombate(int dimX, int dimY, PanelSituaBarcos ancestor, boolean startConnector){
-		this(dimX,dimY,ancestor,"127.0.0.1",HLFServer.DEFAULTPORT, startConnector);
-	}
 	
-	public PanelCombate(int dimX, int dimY, PanelSituaBarcos ancestor, String IP, int port, boolean startConnector){
+	public PanelCombate(PanelSituaBarcos ancestor){
 		super();
-		this.chosenIP = IP;
-		this.chosenPort = port;
-		initcomponents(dimX, dimY, ancestor);
-		if(startConnector){
-			this.connector = new ClientConnector(this, chosenIP, chosenPort);
-		}
+		initcomponents(PanelSituaBarcos.DIMX, PanelSituaBarcos.DIMY, ancestor);
 	}
 	
-	/*A partir de una IP y un puerto inicializa el conector y se intenta conectar a un servidor de 
-	 * Hundir la flota*/
-	public void startConnection(String newIP, int newPort){
-		this.chosenIP = newIP;
-		this.chosenPort = newPort;
-		this.connector.setIP(newIP);
-		this.connector.setPort(newPort);
-		startConnection();
-	}
-	
+	/*A partir de la IP y el puerto obtenidos en obtainConnectionValues() 
+	 * inicializa el conector y se intenta conectar a un servidor de 
+	 * Hundir la flota, si no esta en modo multiplayer no hace nada*/
 	public void startConnection() { 
+		if (!isMPGame()){ 
+			return;
+		}
 		try {
-			this.connector.connectAndStart();
+			this.connector = null;
+			this.connector = new ClientConnector(this, this.chosenIP, this.chosenPort, this.chosenGameID);
+			this.connector.start();
 		}catch(Exception e) {
 			System.out.println("ERROR AL INICIAR LA CONEXION: " + e.getMessage());
 		}
-	}
-	
-	public void stopAll(){
-		this.connector.stopRunning();
-		this.connector = null;
-		this.eventHandler = null;
 	}
 	
 	private void initcomponents(int dimX, int dimY, PanelSituaBarcos ancestor) {
@@ -266,12 +245,17 @@ public class PanelCombate extends JPanel{
 	}
 	
 	/*Envia un mensaje al servidor a traves del conector*/
-	public void sendMsgThroughConnector(String msg){
-		this.connector.sendMsgFromGUI(msg);
+	public boolean sendMsgThroughConnector(String msg){
+		return this.connector.sendMsgFromGUI(msg);
 	}
 	
 	public boolean isUserConnected(){
+		if (connector == null) { return false; }
 		return connector.isConnected();
+	}
+	
+	public void resetChat(){
+		this.chatScrollablePanel.setText("");
 	}
 	
 	/*Funcion que determina si un ataque en una posicion concreta toca barco o agua,
@@ -288,6 +272,24 @@ public class PanelCombate extends JPanel{
 		return false;
 	}
 	
+	public boolean isMPGame() {
+		return this.chosenPort != 0;
+	}
+	
+	public boolean isCustomGame(){
+		return (this.chosenGameID != 0);
+	}
+	
+	public long getGameID(){
+		return this.chosenGameID;
+	}
+	
+	public void stopAll(){
+		this.connector.stopRunning();
+		this.connector = null;
+		this.eventHandler = null;
+	}
+	
 	/*Funcion que llama el conector dependiendo de los datos recibidos por si tu ataque
 	 * ha tocado agua o un trozo de barco */
 	public void drawMyAttackResults(int coordX, int coordY, boolean itHit) {
@@ -300,6 +302,18 @@ public class PanelCombate extends JPanel{
 	
 	public int getChosenPort(){
 		return this.chosenPort;
+	}
+	
+	public void setChosenIP(String newIP){
+		this.chosenIP = newIP;
+	}
+	
+	public void setChosenPort(int newPort){
+		this.chosenPort = newPort;
+	}
+	
+	public void setGameID(long newID){
+		this.chosenGameID = newID;
 	}
 	
 	public void setJugadorDC(boolean DC){
@@ -366,10 +380,14 @@ public class PanelCombate extends JPanel{
 	public void setAguas(int aguas) {
 		this.aguas = aguas;
 	}
+	
 
-	public static void startNewCombat(PanelSituaBarcos situator, String IP, int port){
+	public static void startNewCombat(PanelSituaBarcos situator, boolean singlePlayer){
 		JFrame window = new JFrame("test combate");
-		PanelCombate content = new PanelCombate(9,9,situator, IP, port, true);
+		PanelCombate content = new PanelCombate(situator);
+		if (!singlePlayer) {
+			Utilities.obtainConnectionValues(content, true);
+		}
 		window.setContentPane(content);
 		window.setPreferredSize(new Dimension(1100,800));
 		window.setVisible(true);
@@ -379,8 +397,14 @@ public class PanelCombate extends JPanel{
 		content.startConnection();
 	}
 	
-	public static void main(String[] args){ /*codigo de testeo standalone*/
-		PanelSituaBarcos situator = new PanelSituaBarcos();
+	public static void startNewCombat(PanelSituaBarcos situator){
+		startNewCombat(situator, true);
+	}		
+	
+	/*codigo de testeo standalone para MP*/
+	
+	public static void main(String[] args){ 
+		PanelSituaBarcos situator = new PanelSituaBarcos(false);
 		PanelSituaBarcos.setTipoBarcoArrastrado(2);
 		situator.drawSelBoatOnGrid(2,4,true); //Testing
 		PanelSituaBarcos.setTipoBarcoArrastrado(3);
@@ -389,7 +413,7 @@ public class PanelCombate extends JPanel{
 		situator.drawSelBoatOnGrid(7,7,true);
 		PanelSituaBarcos.setTipoBarcoArrastrado(4);
 		situator.drawSelBoatOnGrid(7,2,true);
-		startNewCombat(situator,"127.0.0.1", 4522);
+		startNewCombat(situator, false);
 		
 	}
 }

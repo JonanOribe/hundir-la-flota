@@ -25,7 +25,7 @@ public class LabelGridBarcos extends JLabel implements MouseListener{
 	protected final static String BARCOARRIBAPATH = "img/Barco-vert-arr.png";
 	protected final static String BARCOMEDVERTPATH = "img/Barco-vert-med.png";
 	protected final static String BARCOABAJOPATH = "img/Barco-vert-abaj.png";
-	protected final static String BARCOSOLOUNAPOSPATH = "img/Barco-1.png";
+	protected final static String BARCOSOLOUNAPOSPATH = "img/Lancha.png";
 	protected final static String BARCOSOLOUNAPOSVERTPATH = "img/Barco-1-vert.png";
 	protected final static String EXPLOSION = "img/explosion1.jpeg";
 	protected final static String AGUA = "img/fallo.jpg"; //para disparos fallidos...
@@ -83,7 +83,7 @@ public class LabelGridBarcos extends JLabel implements MouseListener{
 	protected BufferedImage getGridBackgroundImage(boolean isTopGrid){
 		try {
 			Image fondo;
-			if (isTopGrid) { fondo = (this.i == PanelSituaBarcos.dimX-1) ?  ImageIO.read(new File(MAR2)) : ImageIO.read(new File(MAR1)); } 
+			if (isTopGrid) { fondo = (this.i == PanelSituaBarcos.DIMX-1) ?  ImageIO.read(new File(MAR2)) : ImageIO.read(new File(MAR1)); } 
 			else { fondo = (this.i == 1) ?  ImageIO.read(new File(MAR2)) : ImageIO.read(new File(MAR1)); }
 			BufferedImage fondoImg = new BufferedImage(this.getWidth(), this.getHeight(), BufferedImage.TYPE_INT_ARGB);
 			fondoImg = (BufferedImage)fondo;

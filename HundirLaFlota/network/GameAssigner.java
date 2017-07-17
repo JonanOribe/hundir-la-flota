@@ -1,8 +1,44 @@
 package HundirLaFlota.network;
 
-/*Clase que crea una conexion inicial con el cliente, comprueba que es un cliente legal y le deja unirse
+import java.net.Socket;
+
+/*Clase threaded que crea una conexion inicial con el cliente, comprueba que es un cliente legal y le deja unirse
  * a la partida deseada generada por HLFServer. */
 public class GameAssigner extends ThreadedConnection{
+	
+	private volatile boolean running;
+	
+	public GameAssigner(Socket newConn){
+		running = this.openConnection(newConn) ? true : false;
+	}
+	
+	public void run() {
+		while(running){
+			//HandShake
+			if (!performHandshake()) { running = false; continue; }
+			
+			//Determine player action;
+			long[] playerAction = this.playerIntention();
+			switch ((int)playerAction[0]){
+				case 0:
+					this.assignPlayerToGame((playerAction[1] != 0), playerAction[1]); //join game
+					if (!getShipPositions()) { running = false; } //need to obtain and assign shipPositions FUTURO
+					break;
+				case 1:
+					HLFServer.reconnectUser(true, playerAction[1], this.conn); //rejoin as P1
+					break;
+				case 2:
+					HLFServer.reconnectUser(false, playerAction[1],  this.conn); //rejoin as P2
+					break;
+				case 3:
+					break;
+				default:
+					HLFServer.log("Unknown response to: " + playerAction[0]);
+			}
+			
+			closeAll(); //Reached the end of the steps to connect/reconnect a player
+		}
+	}
 	
 	/*Funcion para hacer un "handshake" con el cliente, le envia unos datos y este debe de retornale
 	 * otros concretos (en este caso los dos deben enviar una constante definida por el servidor.
@@ -25,6 +61,15 @@ public class GameAssigner extends ThreadedConnection{
 			System.out.println("Error con el handshake..." + e.getMessage());
 		}
 		return false;
+	}
+	
+	private boolean getShipPositions(){
+		try {
+			
+		} catch(Exception e) {
+			
+		}
+		return true;
 	}
 	
 	/*Funcion para asignar a un jugador su partida deseada (la primera libre o una con ID elegida).*/
@@ -54,6 +99,13 @@ public class GameAssigner extends ThreadedConnection{
 				assignedGame.assignP2(conn, true);
 			}
 		}
+	}
+	
+	public void closeAll() {
+		this.running = false;
+		this.conn = null;
+		this.incomingData = null;
+		this.outgoingData = null;
 	}
 	
 	/*Funcion para retornar el primer numero de los datos de union al servidor

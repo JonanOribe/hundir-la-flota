@@ -7,3 +7,5 @@
 /PlayerGameIntermediator.class
 /ThreadedConnection.class
 /ConnReaperThread.class
+/GameLogic.class
+/ClientLogic.class

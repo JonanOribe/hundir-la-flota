@@ -56,7 +56,7 @@ public class PlayerGameIntermediator extends ThreadedConnection{
 			if (bufferedText == null) { //Esto se dara si se ha cortado la conexion...
 				return null;
 			}
-			if (isLegalCommand(bufferedText, GameHandlerThread.legalCommands)) {
+			if (isLegalCompoundCommand(bufferedText, GameLogic.legalCommands)) {
 				correctInput = true;
 			}
 		}
@@ -65,7 +65,7 @@ public class PlayerGameIntermediator extends ThreadedConnection{
 	
 	/*Comprueba que el comando enviado este dentro de la lista de comandos legales (solo comprueba la primera
 	 * palabra del comando)*/
-	private boolean isLegalCommand(String command, String[] acceptedCommands){
+	private boolean isLegalCompoundCommand(String command, String[] acceptedCommands){
 		try {
 			String[] realCommand = command.trim().split(",");
 			for (int i = 0; i < acceptedCommands.length; i++){
@@ -119,7 +119,7 @@ public class PlayerGameIntermediator extends ThreadedConnection{
 	/*Funcion para saber si al usuario le toca atacar o recibir ataque en este tipo de juego
 	 * (determinara que comandos son posibles)	 */
 	public boolean isMyTurn(){
-		if (boss.actualPlayer == this.myPlayerNum) {
+		if (boss.getActualPlayer() == this.myPlayerNum) {
 			return true;
 		}
 		return false;

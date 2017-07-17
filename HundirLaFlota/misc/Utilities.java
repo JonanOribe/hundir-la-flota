@@ -7,12 +7,14 @@ import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.RenderingHints;
+import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -23,9 +25,12 @@ import javax.swing.UIManager;
 
 import HundirLaFlota.gui.LabelGridBarcos;
 import HundirLaFlota.gui.LabelGridCombate;
+import HundirLaFlota.gui.PanelCombate;
 import HundirLaFlota.network.HLFServer;
 
 public class Utilities {
+
+	private static JTextField gameID = null;
 
 	public static ImageIcon scaleIconTo(ImageIcon originalIcon, int initialX, int initialY, int width, int height){
 		try {
@@ -184,29 +189,53 @@ public class Utilities {
 	}
     
     /*Funcion para crear un dialogo especifico, por ahora hay un dialogo para pedir puerto de escucha del servidor y otro
-     * para pedir IP y puerto a las que conectarse como cliente   */
+     * para pedir IP y puerto a las que conectarse como cliente  */
     public static String[] createCustomDialog(JFrame frame, int tipo, String defaultIP, int defaultPort) {
     	
-    	//Por ahora dos tipos, crear servidor y conectarte a servidor, primero solo puerto segundo puerto e IP
-    	
-	    String[] IPPort = new String[2];
-
+	    String[] IPPort = new String[3];
 	    JPanel panel = new JPanel(new BorderLayout(5, 5));
 
 	    JPanel label = new JPanel(new GridLayout(0, 1, 2, 2));
 	    JPanel controls = new JPanel(new GridLayout(0, 1, 2, 2));
 	    JTextField IP = null;
+	    gameID = null;
+	    
+	    label.add(new JLabel("Puerto", SwingConstants.RIGHT));
+	    JTextField  Puerto = new JTextField();
+	    Puerto.setText(Integer.toString(defaultPort));
+	    controls.add(Puerto);
+	    
 	    if (tipo > 0){
 		    label.add(new JLabel("IP", SwingConstants.RIGHT));
 		    IP = new JTextField();
 		    controls.add(IP);
 		    IP.setText(defaultIP); //Cambiar en el futuro, detectar IP usuario o tener lista de IPs de servers dedicados o nose...
+		    label.add(new JLabel("ID Partida:", SwingConstants.RIGHT));
+		    gameID = new JTextField();
+		    controls.add(gameID);
+		    gameID.setText("0");
+		    gameID.setEnabled(false);
+		    JCheckBox gameType = new JCheckBox("Partida publica");
+		    gameType.setSelected(true);
+		    gameType.addActionListener(new ActionListener () {
+		    	public void actionPerformed(ActionEvent e) {
+					JCheckBox src = (JCheckBox) e.getSource();
+					if (src.isSelected()) {
+						src.setSelected(true);
+						gameID.setEnabled(false);
+						gameID.setText("0");
+					} else {
+						src.setSelected(false);
+						gameID.setEnabled(true);
+						gameID.setText("");
+					}
+		    	}
+		    });
+		    label.add(new JLabel(""));
+		    controls.add(gameType);
 	    }
-	    label.add(new JLabel("Puerto", SwingConstants.RIGHT));
+	 
 	    panel.add(label, BorderLayout.WEST);
-	    JTextField  Puerto = new JTextField();
-	    Puerto.setText(Integer.toString(defaultPort));
-	    controls.add(Puerto);
 	    panel.add(controls, BorderLayout.CENTER);
 	    String message;
 	    if (tipo > 0) {
@@ -222,9 +251,10 @@ public class Utilities {
         if (eleccion == 1) { return null; } //usuario eligio cancelar, volvemos atras...
 	    try {
 	    if (tipo > 0){
-	    	IPPort[0] = IP.getText();
+	    	IPPort[0] = IP.getText().trim();
+	    	IPPort[2] = gameID.getText().trim();
 	    }
-	    IPPort[1] = Puerto.getText();
+	    IPPort[1] = Puerto.getText().trim();
 	    }
 	    catch(Exception e){
 	    	System.out.println("Error en la introduccion de datos. " + e.getMessage());
@@ -232,6 +262,37 @@ public class Utilities {
 	    return IPPort;
 	}
     
+	/*Presenta al usuario el menu para que este introduzca los datos de la partida a la que quiere
+	 * unirse y le asigna los datos una vez los haya introducido correctamente. El booleano
+	 * determina si obliga al user a poner valores o no */
+	public static boolean obtainConnectionValues(PanelCombate gameGUI, boolean mustGetValues){
+		boolean done = false;
+		while(!done){
+			try {
+				String[] chosenIPPort = Utilities.createCustomDialog(new JFrame(""), 1);
+				
+				if (chosenIPPort == null) {
+					if (mustGetValues) { continue; }
+					else {return false;}
+				} 
+				
+				//Control de errores minimo... esto habria que cambiarlo
+				if (chosenIPPort[0].equals("")) { chosenIPPort[0] = "127.0.0.1"; }
+				if (chosenIPPort[1].equals("")) { chosenIPPort[1] = Integer.toString(HLFServer.DEFAULTPORT); }
+				long customGameID = Long.parseLong(chosenIPPort[2]);
+				if (customGameID < 0 || customGameID >= HLFServer.MAXGAMEID) { continue; }
+				gameGUI.setChosenIP(chosenIPPort[0]);
+				gameGUI.setChosenPort(Integer.parseInt(chosenIPPort[1]));
+				gameGUI.setGameID(customGameID);
+				done = true;
+			}catch(Exception e) {
+				continue;
+			}
+		}
+		gameID = null;
+		return true;
+	}
+
     public static String[] createCustomDialog(JFrame frame, int tipo) {
     	return createCustomDialog(frame,tipo,"127.0.0.1",HLFServer.DEFAULTPORT);
 	}

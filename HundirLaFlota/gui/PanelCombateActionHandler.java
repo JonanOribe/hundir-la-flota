@@ -10,6 +10,9 @@ import javax.swing.JFrame;
 
 import HundirLaFlota.misc.Utilities;
 
+/*NOTA: MODIFICAR EL MENU DE CONEXION CON UNA PESTANYITA PARA CUSTOM GAME O NO Y USALO EN VEZ
+ * DEL ACTUAL, ASI CADA CONEXION VEMOS SI SON CUSTOM O NO
+ */
 public class PanelCombateActionHandler implements ActionListener, KeyListener{
 	
 	private PanelCombate parent;
@@ -26,28 +29,24 @@ public class PanelCombateActionHandler implements ActionListener, KeyListener{
 		}
 		else {
 			if (cmd.equals("Reconectar")){
-				JButton src = (JButton)evt.getSource();
-				JFrame window = (JFrame)src.getTopLevelAncestor();
-				PanelCombate panel = (PanelCombate)window.getContentPane();
-				if (panel.isUserConnected()){
-					panel.writeInChat("Ya estas conectado a una partida!");
+				if (parent.isUserConnected()){
+					parent.writeInChat("Ya estas conectado a una partida!");
 					return;
 				}
-				String[] chosenIPPort = Utilities.createCustomDialog(new JFrame(""), 1, parent.getChosenIP(), parent.getChosenPort());
-				
-				//Control de errores minimo... esto habria que cambiarlo
-				if (chosenIPPort[0].equals("")) { chosenIPPort[0] = parent.getChosenIP(); }
-				if (chosenIPPort[1].equals("")) { chosenIPPort[1] = Integer.toString(parent.getChosenPort()); }
-				
-				panel.startConnection(chosenIPPort[0],Integer.parseInt(chosenIPPort[1]));
-				panel.cambiaQuitButton("Desconectar");
+			
+				if(Utilities.obtainConnectionValues(parent, false)) {
+					parent.resetChat();
+					parent.startConnection();
+					parent.cambiaQuitButton("Desconectar");
+				}
 			}
 			else if (cmd.equals("Salir") || cmd.equals("Desconectar")){
 				JButton src = (JButton)evt.getSource();
 				JFrame window = (JFrame)src.getTopLevelAncestor();
 				PanelCombate panel = (PanelCombate)window.getContentPane();
-				if (panel.isJugadorDC()) {
-					window.dispose(); //CERRAMOS EL PROGRAMA
+				if (cmd.equals("Salir")) {
+					panel.stopAll();
+					window.dispose();//CERRAMOS EL PROGRAMA
 				}
 				else {
 					panel.sendMsgThroughConnector("d/c"); //DESCONECTAMOS AL JUGADOR
@@ -58,8 +57,8 @@ public class PanelCombateActionHandler implements ActionListener, KeyListener{
 				JFrame window = (JFrame)src.getTopLevelAncestor();
 				PanelCombate panel = (PanelCombate)window.getContentPane();
 				window.dispose();
+				PanelSituaBarcos.createNewPSBWindow(false, false);
 				panel.stopAll();
-				PanelSituaBarcos.createNewPSBWindow(panel.getChosenIP(), panel.getChosenPort(), false);
 			}
 			else if (cmd.equals("Volver al menu")){
 				JButton src = (JButton)evt.getSource();

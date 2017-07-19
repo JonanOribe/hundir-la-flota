@@ -16,7 +16,7 @@ import javax.swing.SwingUtilities;
 
 
 @SuppressWarnings("serial")
-public class LabelGridBarcos extends JLabel implements MouseListener{
+public class LabelGrid extends JLabel implements MouseListener{
 
 	
 	protected final static String BARCOIZQPATH = "img/Barco-izq.png";
@@ -27,7 +27,7 @@ public class LabelGridBarcos extends JLabel implements MouseListener{
 	protected final static String BARCOABAJOPATH = "img/Barco-vert-abaj.png";
 	protected final static String BARCOSOLOUNAPOSPATH = "img/Lancha.png";
 	protected final static String BARCOSOLOUNAPOSVERTPATH = "img/Barco-1-vert.png";
-	protected final static String EXPLOSION = "img/explosion1.jpeg";
+	protected final static String EXPLOSION = "img/Explosion.png";
 	protected final static String AGUA = "img/fallo.jpg"; //para disparos fallidos...
 	protected final static String MAR1 = "img/mar1.jpg";
 	protected final static String MAR2 = "img/mar2.jpg";
@@ -40,7 +40,7 @@ public class LabelGridBarcos extends JLabel implements MouseListener{
 	protected boolean keepPaintingH = true; //Si hay un barco de manera permanente en la posicion mantiene el valor en el que hay que dibujarlo para siempre sino se updatea al apretar el raton
 	protected int drawingShipPart = 0;
 	
-	public LabelGridBarcos(int i, int j){
+	public LabelGrid(int i, int j){
 		super("");
 		this.i = i;
 		this.j = j;

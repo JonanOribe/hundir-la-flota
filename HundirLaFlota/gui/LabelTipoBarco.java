@@ -19,7 +19,7 @@ public class LabelTipoBarco extends JLabel implements MouseListener{
 	private int tamanio; 
 	private boolean cancel = false;
 	private PanelSituaBarcos contenedor; //Referencia al tablero
-	private LabelGridBarcos[] labelsBarco;
+	private LabelGrid[] labelsBarco;
 	private boolean seleccionada; //Para saber si la label ha estado seleccionada ya
 	private int initialW = 0, initialH = 0; //Usado al resizear el tablero para poner el dibujo del tamanyo k toke
 	
@@ -119,11 +119,11 @@ public class LabelTipoBarco extends JLabel implements MouseListener{
 		return this.seleccionada;
 	}
 	
-	public LabelGridBarcos[] getLabelsBarco() {
+	public LabelGrid[] getLabelsBarco() {
 		return labelsBarco;
 	}
 
-	public void setLabelsBarco(LabelGridBarcos[] labelsBarco) {
+	public void setLabelsBarco(LabelGrid[] labelsBarco) {
 		this.labelsBarco = labelsBarco;
 	}
 	

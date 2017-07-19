@@ -12,17 +12,18 @@ import javax.swing.border.EtchedBorder;
 
 import HundirLaFlota.misc.Utilities;
 
+/*Clase que creara la GUI para poner los barcos en su sitio*/
 @SuppressWarnings("serial")
 public class PanelSituaBarcos extends JPanel{
 
 	private static LabelTipoBarco[] flota;
-	private static LabelGridBarcos[] lastLabelsDrawn; //Ultimas labels pintadas, usado para borrar sin tener que ciclar todas las posiciones
+	private static LabelGrid[] lastLabelsDrawn; //Ultimas labels pintadas, usado para borrar sin tener que ciclar todas las posiciones
 	private static int tipoBarcoArrastrado;
 	private static boolean horizontal = true;  //Dibuja los barcos (no permanentemente dibujados) en horiz/vertical
 	private static boolean acceptedPos = false; 
 	public static final int DIMX = 9; //Dimensiones del grid de posiciones (sera la real +1 por el extra de numeros/letras asi que 8 (9) default)
 	public static final int DIMY = 9;
-	private LabelGridBarcos[][] topGrid; //Referencia al grid de arriba con las posiciones deseadas de los barcos
+	private LabelGrid[][] boatGrid; //Referencia al grid de arriba con las posiciones deseadas de los barcos
 	private JButton BotonAceptar;
 	
 	public PanelSituaBarcos(boolean singlePlayer){
@@ -32,7 +33,7 @@ public class PanelSituaBarcos extends JPanel{
 	}
                       
 	   	private void initComponents(boolean singlePlayer) {
-			LabelGridBarcos.setContainer(this);	
+			LabelGrid.setContainer(this);	
 
 	    	flota = new LabelTipoBarco[4];
 			flota[0] = new LabelTipoBarco("img/Barco-1.png",1, this);
@@ -73,8 +74,7 @@ public class PanelSituaBarcos extends JPanel{
 	        BotonAceptar.addActionListener(new ActionListener () {
        	    	public void actionPerformed (ActionEvent e) {
        	    		JButton src = (JButton)e.getSource();
-       	    		JFrame contenedor = (JFrame)src.getTopLevelAncestor();
-       	    		PanelSituaBarcos thisPanel = (PanelSituaBarcos)contenedor.getContentPane();
+       	    		MainWindow contenedor = (MainWindow)src.getTopLevelAncestor();
        	    		if (singlePlayer) { //Llegaremos aqui si el usuario ha elegido 1 jugador contra la AI...
        	    			
        	    			
@@ -86,12 +86,11 @@ public class PanelSituaBarcos extends JPanel{
        	    			 */
        	    			
        	    			
-       	    			PanelCombate.startNewCombat(thisPanel);
+       	    			contenedor.goToState(MainWindow.windowState.SPGAMEBOARD);
        	    		}
        	    		else {
-       	    			PanelCombate.startNewCombat(thisPanel, false);
+       	    			contenedor.goToState(MainWindow.windowState.MPGAMEBOARD);
        	    		}
-       	    		contenedor.dispose();
        	    	}
 	        });
 	        	
@@ -195,7 +194,7 @@ public class PanelSituaBarcos extends JPanel{
 			}*/
 			PanelGrid.setLayout(new GridLayout(DIMX,DIMY,-1,-1));
 			
-			topGrid = (LabelGridBarcos[][])Utilities.createGrid(DIMX,DIMY, PanelGrid,0,null);
+			boatGrid = (LabelGrid[][])Utilities.createGrid(DIMX,DIMY, PanelGrid,0,null);
 			
 	    }
 	
@@ -224,12 +223,12 @@ public class PanelSituaBarcos extends JPanel{
 		if (horizontal) { tmp = firstGridCol;  dim = DIMX;  }
 		else { tmp = firstGridRow; dim = DIMY; }
 		i = tipoBarcoArrastrado-1;
-		lastLabelsDrawn = new LabelGridBarcos[tipoBarcoArrastrado];
-		lastLabelsDrawn[0] = topGrid[firstGridRow-1][firstGridCol-1];
-		if (!topGrid[firstGridRow-1][firstGridCol-1].hayBarcoPermanente()) {
+		lastLabelsDrawn = new LabelGrid[tipoBarcoArrastrado];
+		lastLabelsDrawn[0] = boatGrid[firstGridRow-1][firstGridCol-1];
+		if (!boatGrid[firstGridRow-1][firstGridCol-1].hayBarcoPermanente()) {
 			acceptedPos = true;
-			if (i == 0) { topGrid[firstGridRow-1][firstGridCol-1].setDrawingShipPart(4, drawPermanently); return acceptedPos;} //Si es un barco de un solo elemento...
-			else { topGrid[firstGridRow-1][firstGridCol-1].setDrawingShipPart(1, drawPermanently); } // Sino, pinta la label en la que esta el raton con el grafico de mas a la izkierda
+			if (i == 0) { boatGrid[firstGridRow-1][firstGridCol-1].setDrawingShipPart(4, drawPermanently); return acceptedPos;} //Si es un barco de un solo elemento...
+			else { boatGrid[firstGridRow-1][firstGridCol-1].setDrawingShipPart(1, drawPermanently); } // Sino, pinta la label en la que esta el raton con el grafico de mas a la izkierda
 		} 
 		else { 
 			acceptedPos = false; 
@@ -242,16 +241,16 @@ public class PanelSituaBarcos extends JPanel{
 			if (tmp < (dim)){
 				//System.out.println("Drawing to Row: " + firstGridRow + " , Col: " + firstGridCol + " , dim (x): " + dimX);
 				if (horizontal) { 
-					if (!topGrid[firstGridRow-1][tmp-1].hayBarcoPermanente()){
-						topGrid[firstGridRow-1][tmp-1].setDrawingShipPart(draw, drawPermanently);
-						lastLabelsDrawn[counter] = topGrid[firstGridRow-1][tmp-1];
+					if (!boatGrid[firstGridRow-1][tmp-1].hayBarcoPermanente()){
+						boatGrid[firstGridRow-1][tmp-1].setDrawingShipPart(draw, drawPermanently);
+						lastLabelsDrawn[counter] = boatGrid[firstGridRow-1][tmp-1];
 					} else {
 						acceptedPos = false;
 					}
 				} else {
-					if (!topGrid[tmp-1][firstGridCol-1].hayBarcoPermanente()){
-						topGrid[tmp-1][firstGridCol-1].setDrawingShipPart(draw, drawPermanently);
-						lastLabelsDrawn[counter] = topGrid[tmp-1][firstGridCol-1];
+					if (!boatGrid[tmp-1][firstGridCol-1].hayBarcoPermanente()){
+						boatGrid[tmp-1][firstGridCol-1].setDrawingShipPart(draw, drawPermanently);
+						lastLabelsDrawn[counter] = boatGrid[tmp-1][firstGridCol-1];
 					} else {
 						acceptedPos = false;
 					}
@@ -271,7 +270,7 @@ public class PanelSituaBarcos extends JPanel{
 	 * (si estan dibujadas permanentemente no podra pero por la funcion) y pone acceptedPos en falso*/
 	public static void cleanBoatPaintedLabels(){
 		if (lastLabelsDrawn == null) { return;}
-		for (LabelGridBarcos label : lastLabelsDrawn){
+		for (LabelGrid label : lastLabelsDrawn){
 			if (label != null){
 				label.setDrawingShipPart(0, false);
 			}
@@ -282,10 +281,10 @@ public class PanelSituaBarcos extends JPanel{
 	/*Devuelve un grid con las posiciones de los barcos puestos durante el proceso de seleccion
 	 * de posiciones compatible con la grid de PanelCombate */
 	public LabelGridCombate[][] exportaGrid(){
-		LabelGridCombate[][] export = new LabelGridCombate[topGrid.length][topGrid[0].length];
-		for (int i = 0; i < topGrid.length; i++){
-			for (int j = 0; j < topGrid[i].length; j++){
-					export[i][j] = topGrid[i][j].exportToLGC();
+		LabelGridCombate[][] export = new LabelGridCombate[boatGrid.length][boatGrid[0].length];
+		for (int i = 0; i < boatGrid.length; i++){
+			for (int j = 0; j < boatGrid[i].length; j++){
+					export[i][j] = boatGrid[i][j].exportToLGC();
 				}
 			}
 		return export;
@@ -343,8 +342,8 @@ public class PanelSituaBarcos extends JPanel{
 	public static void setAcceptedPos(boolean acceptedPos) {
 		PanelSituaBarcos.acceptedPos = acceptedPos;
 	}
-	/*Bckground stuff determina si se ha creado un servidor no dedicado por lo que no 
-	 * debemos cerrar todo al cerrar la ventana. (buscar otros metodos) */
+	
+	/*Legacy, existe para testear sin venir desde el menu incial */
 	public static JFrame createNewPSBWindow(boolean singlePlayer, boolean bkgServer){
 		JFrame window = new JFrame("Posiciona tus barcos");
 		PanelSituaBarcos content = new PanelSituaBarcos(singlePlayer);

@@ -5,7 +5,7 @@ package HundirLaFlota.network;
  */
 public class GameLogic {
 	
-	static String[] legalCommands = {"a","d/c","h","m","d/c","chat","r","R","start","timeout","win","dcwin","lose"};
+	static String[] legalCommands = {"a","d/c","h","m","chat","r","R","start","timeout","win","dcwin","lose"};
 	static String[] legalActions = {"a","d/c","chat"};
 	static String[] legalResponses = {"h","m","d/c","chat"};
 	

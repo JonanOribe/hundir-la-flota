@@ -7,7 +7,7 @@ import java.awt.event.MouseListener;
 
 /*Elementos (Labels) de la grid en la GUI del combate*/
 @SuppressWarnings("serial")
-public class LabelGridCombate extends LabelGridBarcos implements MouseListener{
+public class LabelGridCombate extends LabelGrid implements MouseListener{
 
 	private static PanelCombate contenedor;
 	private boolean isTopGrid = false;
@@ -54,8 +54,9 @@ public class LabelGridCombate extends LabelGridBarcos implements MouseListener{
 	public void mousePressed(MouseEvent mouseAction) {
 		//contenedor.drawAIShips(); //Cambiar de sitio a cuando comienza la ronda, esto es para testeo de la AI
 		LabelGridCombate src = (LabelGridCombate)mouseAction.getSource();
-		if (src.isTopGrid && !hasBeenShot()) {
+		if (src.isTopGrid && !hasBeenShot() && contenedor.isMyTurn()) {
 			contenedor.sendMsgThroughConnector("a," + this.i + "," + this.j); //Le envia al servidor "a," + la posicion de esta label en el grid (ej: a,3,5)
+			contenedor.playerActed();
 		}
 	}
 	public void mouseEnter(MouseEvent mouseAction) {}

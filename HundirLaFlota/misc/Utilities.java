@@ -23,11 +23,12 @@ import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 
-import HundirLaFlota.gui.LabelGridBarcos;
+import HundirLaFlota.gui.LabelGrid;
 import HundirLaFlota.gui.LabelGridCombate;
 import HundirLaFlota.gui.PanelCombate;
 import HundirLaFlota.network.HLFServer;
 
+/*Clase con funciones auxiliares para las demas clases de Hundir la flota*/
 public class Utilities {
 
 	private static JTextField gameID = null;
@@ -70,7 +71,7 @@ public class Utilities {
         int colN = 0,rowL = 0;      
         JLabel[][] myGrid;
         if (tipo == 0) {
-            myGrid = new LabelGridBarcos[rows-1][cols-1];
+            myGrid = new LabelGrid[rows-1][cols-1];
         }else {
             myGrid = new LabelGridCombate[rows-1][cols-1];
         }
@@ -98,7 +99,7 @@ public class Utilities {
                 }
                 else {
                     if (tipo == 0) {
-                        gridSquare = new LabelGridBarcos(i, j);
+                        gridSquare = new LabelGrid(i, j);
                     }
                     else {
                         if (exportedInnerGrid == null){
@@ -265,7 +266,7 @@ public class Utilities {
 	/*Presenta al usuario el menu para que este introduzca los datos de la partida a la que quiere
 	 * unirse y le asigna los datos una vez los haya introducido correctamente. El booleano
 	 * determina si obliga al user a poner valores o no */
-	public static boolean obtainConnectionValues(PanelCombate gameGUI, boolean mustGetValues){
+	public static boolean inputConnectionToBoard(PanelCombate gameGUI, boolean mustGetValues){
 		boolean done = false;
 		while(!done){
 			try {

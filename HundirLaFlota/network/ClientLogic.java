@@ -28,25 +28,28 @@ public class ClientLogic {
 			}
 			else if (commands[0].equals("t")){
 				contenedor.writeInChat("Es tu turno.");
+				contenedor.setMyTurn(true);
 				contenedor.jugadorLabel.setText("Jug. " + client.getPlayerNum() +" (atacante)");
 			}
 			else if (commands[0].equals("nt")){
 				contenedor.writeInChat("Turno del oponente.");
+				contenedor.setMyTurn(false);
 				contenedor.jugadorLabel.setText("Jug. " + client.getPlayerNum() + " (defensor)");
 			}
 			else if (commands[0].equals("d/c") || commands[0].equals("timeout")){
 				String msg = (commands[0].equals("d/c")) ? "Desconectando..." : "Desconectado por inactividad...";
 				contenedor.writeInChat(msg);
+				contenedor.resetTimer();
 				client.closeAll();
 				client.stopRunning();
-				jugadorSeDesconecta(true, false, contenedor);
+				jugadorSeDesconecta(true, true, contenedor);
 			}
 			else if (commands[0].equals("a")) {
 				//Primero comprueba si la posicion en la grid es barco o agua (y la misma funcion isAHit cambiara los graficos
 				//Y luego escribe en el chat y envia el mensaje correspondiente al servidor de si ha sido agua o tocado
 				String HorM = (contenedor.enemyAttacksPos(Integer.parseInt(commands[1]), Integer.parseInt(commands[2]))) ? "h":"m";
 				contenedor.writeInChat("El oponente ataca la posicion -> " + ((char)('A' + Integer.parseInt(commands[1]) - 1)) + "," + commands[2]);
-				ThreadedConnection.sendMsg((HorM + "," + commands[1] + "," + commands[2]), client.outgoingData); //Aleatori per ara, en el futur comprovacions....
+				ThreadedConnection.sendMsg((HorM + "," + commands[1] + "," + commands[2]), client.outgoingData); 
 				if (client.getHalfTurn()) {
 					contenedor.setTurno(contenedor.getTurno() + 1);
 					contenedor.turnosLabel.setText("TURNO: " + contenedor.getTurno());
@@ -54,6 +57,8 @@ public class ClientLogic {
 				} else {
 					client.setHalfTurn(!client.getHalfTurn());
 				}
+				contenedor.resetTimer();
+
 			} 
 			else if (commands[0].equals("h") || commands[0].equals("m")) {
 				int puntos;
@@ -83,20 +88,24 @@ public class ClientLogic {
 				} else {
 					client.setHalfTurn(!client.getHalfTurn());
 				}
+				contenedor.resetTimer();
 			}
 			else if (commands[0].equals("dcwin")) { //Win by default, other client d/ced...
 				contenedor.writeInChat("El oponente se desconecto. Has ganado!");
 				jugadorSeDesconecta(true, true, contenedor);
+				contenedor.resetTimer();
 				client.stopRunning();
 			}
 			else if (commands[0].equals("win")){
 				contenedor.writeInChat("Has hundido la flota de tu oponente. Has ganado. Felicidades!");
 				jugadorSeDesconecta(true, true, contenedor);
+				contenedor.resetTimer();
 				client.stopRunning();
 			}
 			else if (commands[0].equals("lose")){
 				contenedor.writeInChat("Tu oponente ha hundido todos tus barcos. Has perdido!");
 				jugadorSeDesconecta(true, true, contenedor);
+				contenedor.resetTimer();
 				client.stopRunning();
 			}
 		} catch(Exception e){

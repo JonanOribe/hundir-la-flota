@@ -8,6 +8,7 @@ import javax.swing.BorderFactory;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.Timer;
 import javax.swing.border.EtchedBorder;
 
 import HundirLaFlota.ai.BoatHandling;
@@ -15,15 +16,16 @@ import HundirLaFlota.misc.Utilities;
 import HundirLaFlota.network.ClientConnector;
 
 /*Panel que contendra los paneles con la grid del usuario y un contrincante y gestionara
- * la comunicacion entre estos 
- * Agregar checkeo al cerrar ventana para cerrar el conector tb, hay que poner
- * un windowAdapter al eventHandler...*/
+ * la comunicacion entre esto.*/
 @SuppressWarnings("serial")
 public class PanelCombate extends JPanel{
 	
 	private LabelGridCombate[][] gridCoordsTop, gridCoordsBot;
 	static final String DEFAULTPREFIX = ">> ";   //Prefijo que se antepondra a los mensajes de chat
+	public static final int SEGUNDOSPORTURNO = 60; //Determina cuantos segundos tiene el usuario para actuar antes de ser avisado por inactividad en su turno
 	private PanelCombateActionHandler eventHandler;
+	private Timer turnTimer;
+	
 	private String chosenIP;
 	private int chosenPort = 0;
 	private long chosenGameID;
@@ -33,12 +35,12 @@ public class PanelCombate extends JPanel{
 	private int turno = 1;
 	private int aciertos = 0;
 	private int aguas = 0;
-	
-    private javax.swing.JPanel bottomLeftPanel;
+
+	private javax.swing.JPanel bottomLeftPanel;
     javax.swing.JTextArea chatScrollablePanel;
     textInputArea inputTextArea;
     private javax.swing.JPanel leftMidSmallPanel;
-    private javax.swing.JButton chatButton;
+    javax.swing.JButton chatButton;
     private javax.swing.JButton reconnectButton;
     private javax.swing.JButton quitButton;
     private javax.swing.JScrollPane chatTextPane;
@@ -49,10 +51,13 @@ public class PanelCombate extends JPanel{
     public JLabel turnosLabel;
     public JLabel aciertosAguasLabel;
     public JLabel jugadorLabel;
+    public JLabel timerLabel;
 	
 	public PanelCombate(PanelSituaBarcos ancestor){
 		super();
 		initcomponents(PanelSituaBarcos.DIMX, PanelSituaBarcos.DIMY, ancestor);
+		turnTimer = new Timer(1000, eventHandler); //un timer que se comprueba cada segundo
+		turnTimer.start();
 	}
 	
 	/*A partir de la IP y el puerto obtenidos en obtainConnectionValues() 
@@ -212,7 +217,7 @@ public class PanelCombate extends JPanel{
         
         inputTextArea.setText("...");
        
-        leftMidSmallPanel.setLayout(new GridLayout(0,4,5,5));
+        leftMidSmallPanel.setLayout(new GridLayout(0,5,5,5));
         puntosLabel = new JLabel("PUNTOS: 0", JLabel.CENTER);
         puntosLabel.setBorder(BorderFactory.createMatteBorder(2,4,2,4,Color.BLACK));
         leftMidSmallPanel.add(puntosLabel);
@@ -225,6 +230,9 @@ public class PanelCombate extends JPanel{
         jugadorLabel = new JLabel("Jug. 1", JLabel.CENTER);
         jugadorLabel.setBorder(BorderFactory.createMatteBorder(2,4,2,4,Color.BLACK));
         leftMidSmallPanel.add(jugadorLabel);
+        timerLabel = new JLabel("Tiempo: " + SEGUNDOSPORTURNO, JLabel.CENTER);
+        timerLabel.setBorder(BorderFactory.createMatteBorder(2,4,2,4,Color.BLACK));
+        leftMidSmallPanel.add(timerLabel);
      
         leftMidSmallPanel.setBorder(BorderFactory.createEtchedBorder(EtchedBorder.RAISED));
 		topLeftPanel.setLayout((new GridLayout(dimX,dimY,-1,-1)));
@@ -288,6 +296,7 @@ public class PanelCombate extends JPanel{
 		this.connector.stopRunning();
 		this.connector = null;
 		this.eventHandler = null;
+		this.turnTimer = null;
 	}
 	
 	/*Funcion que llama el conector dependiendo de los datos recibidos por si tu ataque
@@ -380,13 +389,35 @@ public class PanelCombate extends JPanel{
 	public void setAguas(int aguas) {
 		this.aguas = aguas;
 	}
+
+	public void setSeconds(int seconds) {
+		eventHandler.setSeconds(seconds);
+	}
 	
+	public void playerActed(){
+		if (eventHandler != null) eventHandler.setPlayerActive(true);
+	}
+	
+	public boolean isMyTurn(){
+		if (connector == null) { return false; }
+		return connector.isMyTurn();
+	}
+	
+	public void setMyTurn(boolean newT){
+		if (connector == null) { return; }
+		connector.setMyTurn(newT);
+		eventHandler.setSeconds(SEGUNDOSPORTURNO);
+	}
+	
+	public void resetTimer(){
+		eventHandler.resetSeconds();
+	}
 
 	public static void startNewCombat(PanelSituaBarcos situator, boolean singlePlayer){
 		JFrame window = new JFrame("test combate");
 		PanelCombate content = new PanelCombate(situator);
 		if (!singlePlayer) {
-			Utilities.obtainConnectionValues(content, true);
+			Utilities.inputConnectionToBoard(content, true);
 		}
 		window.setContentPane(content);
 		window.setPreferredSize(new Dimension(1100,800));
@@ -401,7 +432,7 @@ public class PanelCombate extends JPanel{
 		startNewCombat(situator, true);
 	}		
 	
-	/*codigo de testeo standalone para MP*/
+	/*Legacy, codigo de testeo standalone para MP*/
 	
 	public static void main(String[] args){ 
 		PanelSituaBarcos situator = new PanelSituaBarcos(false);

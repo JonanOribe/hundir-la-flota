@@ -148,13 +148,6 @@ public class GameHandlerThread extends Thread{
 		PlayerGameIntermediator player = (playerNumber == 1) ? P1Listener : P2Listener;
 		PlayerGameIntermediator.sendMsg(Long.toString(gameID), player.outgoingData);
 	}
-
-	/*Creo que hay problemas con los timer + threads, por lo que el timer se ejecutara en el
-	 * cliente y llamara a esta funcion...	 */
-	public void timerCheck() {
-		HLFServer.log(thisGameID() + "Timer fired...");
-		GameLogic.checkForDCPlayers(false, true, this);
-	}
 	
 	/*Asigna un cliente al jugador 2, abre sus conexiones y comienza la partida si es necesario*/
 	protected void assignP2(Socket P2Conn, boolean start){

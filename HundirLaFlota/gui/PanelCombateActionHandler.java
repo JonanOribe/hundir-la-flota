@@ -6,17 +6,20 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
 import javax.swing.JButton;
-import javax.swing.JFrame;
 
 import HundirLaFlota.misc.Utilities;
 
-/*NOTA: MODIFICAR EL MENU DE CONEXION CON UNA PESTANYITA PARA CUSTOM GAME O NO Y USALO EN VEZ
- * DEL ACTUAL, ASI CADA CONEXION VEMOS SI SON CUSTOM O NO
+/*Clase que controla la logica de los eventos que suceden en un PanelCombate.
+ * Seria: Los botones (enviar chat, desconectar, reconectar, salir, volver al menu
+ * y volver a jugar) y el timer (se activa cada 1000ms por ahora)
  */
 public class PanelCombateActionHandler implements ActionListener, KeyListener{
 	
 	private PanelCombate parent;
-	
+	private boolean playerActive = true;
+	private int seconds = PanelCombate.SEGUNDOSPORTURNO;
+
+
 	public PanelCombateActionHandler(PanelCombate panel){
 		parent = panel;
 	}
@@ -24,8 +27,23 @@ public class PanelCombateActionHandler implements ActionListener, KeyListener{
 	@Override
 	public void actionPerformed(ActionEvent evt) {
 		String cmd = evt.getActionCommand();
-		if (cmd == null) { //timer
-			
+		/*Timer -- cada segundo se activa y baja una unidad los segundos del usuario si es su turno,
+		 * si llega a zero se le envia un msg por inactividad y si vuelve a zero se le desconecta...
+		 */
+		if (cmd == null) {
+			if (parent.isMyTurn()){
+				seconds--;
+				if (seconds < 0) {
+					seconds = PanelCombate.SEGUNDOSPORTURNO;
+					if (!playerActive) {
+						parent.sendMsgThroughConnector("d/c");
+					} else {
+						playerActive = !playerActive;
+						parent.writeInChat("Aviso por inactividad");
+					}
+				}
+				parent.timerLabel.setText("Tiempo: " + seconds);
+			}
 		}
 		else {
 			if (cmd.equals("Reconectar")){
@@ -34,7 +52,7 @@ public class PanelCombateActionHandler implements ActionListener, KeyListener{
 					return;
 				}
 			
-				if(Utilities.obtainConnectionValues(parent, false)) {
+				if(Utilities.inputConnectionToBoard(parent, false)) {
 					parent.resetChat();
 					parent.startConnection();
 					parent.cambiaQuitButton("Desconectar");
@@ -42,11 +60,11 @@ public class PanelCombateActionHandler implements ActionListener, KeyListener{
 			}
 			else if (cmd.equals("Salir") || cmd.equals("Desconectar")){
 				JButton src = (JButton)evt.getSource();
-				JFrame window = (JFrame)src.getTopLevelAncestor();
+				MainWindow window = (MainWindow)src.getTopLevelAncestor();
 				PanelCombate panel = (PanelCombate)window.getContentPane();
-				if (cmd.equals("Salir")) {
+				if (cmd.equals("Salir")) {  //Salimos del todo
 					panel.stopAll();
-					window.dispose();//CERRAMOS EL PROGRAMA
+					window.closeThisWOptions(true);
 				}
 				else {
 					panel.sendMsgThroughConnector("d/c"); //DESCONECTAMOS AL JUGADOR
@@ -54,20 +72,17 @@ public class PanelCombateActionHandler implements ActionListener, KeyListener{
 			}
 			else if (cmd.equals("Volver a jugar")){
 				JButton src = (JButton)evt.getSource();
-				JFrame window = (JFrame)src.getTopLevelAncestor();
+				MainWindow window = (MainWindow)src.getTopLevelAncestor();
 				PanelCombate panel = (PanelCombate)window.getContentPane();
-				window.dispose();
-				PanelSituaBarcos.createNewPSBWindow(false, false);
 				panel.stopAll();
+				window.goToState(MainWindow.windowState.PLACEBOATS);
 			}
 			else if (cmd.equals("Volver al menu")){
 				JButton src = (JButton)evt.getSource();
-				JFrame window = (JFrame)src.getTopLevelAncestor();
+				MainWindow window = (MainWindow)src.getTopLevelAncestor();
 				PanelCombate panel = (PanelCombate)window.getContentPane();
-				window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-				window.dispose();
 				panel.stopAll();
-				MenuInicial.createMenuInitialWindow();
+				window.goToState(MainWindow.windowState.MAINMENU);
 			}
 			else {
 				chatButtonPress();
@@ -75,7 +90,9 @@ public class PanelCombateActionHandler implements ActionListener, KeyListener{
 		}
 	}
 	
-	private void chatButtonPress(){ //MOVER A CLASE AUXILIAR PQ CLUTTEREA EL CODIGO
+	/*Funcion auxiliar que gestiona el apretar el boton de enviar chat (se envia el texto al servidor y
+	 * se logea en la ventana de chat)	 */
+	private void chatButtonPress(){ 
 		String text = parent.inputTextArea.getText();
 		if (!text.equals("...") && !text.equals("")){
 			if (!parent.isJugadorDC()){
@@ -89,6 +106,7 @@ public class PanelCombateActionHandler implements ActionListener, KeyListener{
 		}
 	}
 
+	//Si se aprieta el boton de enter se ejecuta lo mismo que apretando el boton de enviar
 	@Override
 	public void keyPressed(KeyEvent e) {
 		if (e.getKeyCode()==KeyEvent.VK_ENTER){
@@ -107,6 +125,31 @@ public class PanelCombateActionHandler implements ActionListener, KeyListener{
 	public void keyTyped(KeyEvent arg0) {
 		// TODO Auto-generated method stub
 		
+	}
+	
+	public boolean isPlayerActive() {
+		return playerActive;
+	}
+
+	public void setPlayerActive(boolean inactivityCheck) {
+		this.playerActive = inactivityCheck;
+	}
+	
+	
+	public int getSeconds() {
+		return seconds;
+	}
+
+	public void setSeconds(int seconds) {
+		this.seconds = seconds;
+	}
+	
+	/*Funcion que resetea los segundos que tiene el usuario para actuar y cancela su turno para
+	 * que el timer no baje */
+	public void resetSeconds(){
+		this.seconds = PanelCombate.SEGUNDOSPORTURNO;
+		parent.timerLabel.setText("Tiempo: " + seconds);
+		parent.setMyTurn(false);
 	}
 
 }

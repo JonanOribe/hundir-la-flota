@@ -24,6 +24,7 @@ public class ClientConnector extends ThreadedConnection{
 	private int port = HLFServer.DEFAULTPORT;
 	private long assignedGameID;
 	private int myPlayerNum;
+	private boolean isMyTurn;
 	private boolean halfTurn = false;
 	
 	public ClientConnector(PanelCombate contenedor, String IP, int port, long customGameID) {
@@ -53,7 +54,6 @@ public class ClientConnector extends ThreadedConnection{
 			}
 		}
 		contenedor.writeInChat("Cerrada la conexion con el servidor.");
-		ClientLogic.jugadorSeDesconecta(true, false, contenedor);
 		closeAll();
 	}
 
@@ -151,7 +151,7 @@ public class ClientConnector extends ThreadedConnection{
 			String[] msgValues = msg.trim().split(",");
 			String player = " como Jugador 2.";
 			this.assignedGameID = Long.parseLong(msgValues[0]);
-			String gameType = (assignedGameID == 0) ? "publica" : "privada"; 
+			String gameType = (gameID == 0) ? "publica" : "privada"; 
 			String customGameID = "";
 			if (assignedGameID >= HLFServer.MAXAMOUNTFORPUBLICGAMES) {
 				customGameID = Long.toString(assignedGameID - HLFServer.MAXAMOUNTFORPUBLICGAMES);
@@ -173,6 +173,8 @@ public class ClientConnector extends ThreadedConnection{
 	/*Comando para parar la ejecucion de esta clase*/
 	public void stopRunning(){
 		this.running = false;
+		contenedor.setJugadorDC(true);
+		contenedor.resetTimer();
 	}
 
 	public void sendReconnectGame(){
@@ -197,6 +199,14 @@ public class ClientConnector extends ThreadedConnection{
 	
 	public void setGameID(long newID){
 		this.assignedGameID = newID;
+	}
+	
+	public boolean isMyTurn() {
+		return isMyTurn;
+	}
+
+	public void setMyTurn(boolean isMyTurn) {
+		this.isMyTurn = isMyTurn;
 	}
 	
 	/*Para ejecutarlo standalone... testeo, en teoria lo generara la GUI*/

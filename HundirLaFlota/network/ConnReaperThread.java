@@ -3,12 +3,12 @@ package HundirLaFlota.network;
 import java.util.ArrayList;
 
 /*Programa ejecutado en paralelo que se activa cada x tiempo y comprueba
- * si algun usuario se ha desconectado para cerrar su conexion... 
- * Usar esto o comprobacion por timers desde la GUI, no las dos cosas...
- * (Usar timercheck desde la GUI...)*/
+ * si algun usuario se ha desconectado para cerrar su conexion... usado
+ * en paralelo con un timer desde la GUI, este comprueba desconexiones 
+ * el timer de la GUI no estar activo */
 public class ConnReaperThread extends Thread{
 
-	public static final int WAKEUPMILLIS = 60000;
+	public static final int WAKEUPMILLIS = 80000;
 	private volatile boolean running = true;
 	
 	public void run(){
@@ -20,7 +20,7 @@ public class ConnReaperThread extends Thread{
 				if (games == null) { continue;}
 				for (int i = 0; i < games.size(); i++){
 					if (games.get(i).hasP2()){ //Solo comprueba cuando los dos jugadores estan dentro
-						GameLogic.checkForDCPlayers(false, true, games.get(i)); //Pueden haber problemas de sync aki...?
+						GameLogic.checkForDCPlayers(false, true, games.get(i)); 
 					}
 				}
 			}

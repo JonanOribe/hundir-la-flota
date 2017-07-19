@@ -3,11 +3,12 @@ package HundirLaFlota;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.sql.SQLException;
 import java.util.Scanner;
 
 public class Main {
 
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, SQLException {
 
 		Scanner sc = new Scanner(System.in);
 		int opcion = 0;
@@ -60,7 +61,7 @@ public class Main {
 			System.out.println("                   | 2- NORMAS   |");
 			System.out.println("                    ------------- ");
 			System.out.println("                    ------------- ");
-			System.out.println("                   | 3-  INFO    |");
+			System.out.println("                   | 3-  TOP 10    |");
 			System.out.println("                    ------------- ");
 			System.out.println("                    ------------- ");
 			System.out.println("                   | 4-  SALIR   |");
@@ -80,8 +81,8 @@ public class Main {
 				break;
 			}
 			case 3: {
-				//¿Este campo es realmente necesario?
-				;
+				Funciones.ranking(); //En desarrollo
+				
 				break;
 			}
 			case 4: {

@@ -39,7 +39,7 @@ public class LabelGridCombate extends LabelGrid implements MouseListener{
 	}
 	
 	public boolean hasBeenShot(){
-		if (drawingShipPart > 4) {
+		if (drawingShipPart > 5) {
 			return true;
 		}
 		return false;
@@ -47,8 +47,8 @@ public class LabelGridCombate extends LabelGrid implements MouseListener{
 	
 	/*Funcion para que se dibuje tocado o agua en la label*/
 	public void setDrawHitorMiss(boolean isHit){
-		if (isHit) { this.drawingShipPart = 5; } //grafico tocado
-		else { this.drawingShipPart = 6;} //grafico agua
+		if (isHit) { this.drawingShipPart = 6; } //grafico tocado
+		else { this.drawingShipPart = 7;} //grafico agua
 		repaint();
 	}
 		

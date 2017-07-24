@@ -2,11 +2,7 @@ package HundirLaFlota.misc;
 
 import java.util.ArrayList;
 
-import HundirLaFlota.gui.LabelTipoBarco;
-import HundirLaFlota.gui.MainWindow;
-
-/*Clase que hace las funciones de un set de objetos int[] (tengo que aprenderme los metodos
- * para programar clases que usan objetos generalistas....)
+/*Clase que hace las funciones de un set de objetos int[] 
  * 
  * La precondicion en el Set es que no puede haber elementos repetidos, esto se comprueba
  * haciendo contains cada vez que hagas un add.
@@ -114,49 +110,11 @@ public class BoatCoordsSet {
 				all += tmp[j] + ", ";
 			}
 		}
-		if (!all.equals("")){
+		if (all.length() > 2){
 			all = all.substring(0, (all.length()-2));
 		}
 		return all;
 	}
 	
-	/*Esta funcion tiene que firear despues de PanelSituaBarcos, ponerla en mainWindow?
-	 * 
-	 */
-	public static String getShipsPosMsg(LabelTipoBarco[] flota) {
-		if (flota == null) { return ""; }
-		int[][] posiciones;
-		String compoundMsg = "";
-		for (LabelTipoBarco barco : flota) {
-			posiciones = barco.getStoredLabelCoords();
-			for (int i = 0; i < posiciones.length; i++) {
-				compoundMsg += posiciones[i][0] + "," + posiciones[i][1] + ",";
-			}
-		}
-		compoundMsg = compoundMsg.substring(0, compoundMsg.length()-1);
-		compoundMsg = compoundMsg.trim();
-		return compoundMsg;
-	}
-	
-	public static BoatCoordsSet getSetFromFormattedCoords(long[] positions) {
-		if (positions == null) { return null; }
-		BoatCoordsSet playerPosSet = new BoatCoordsSet();
-		try {
-			int[] tmpPos = new int[2];
-			for (int i = 2; i < positions.length-1; i+=2) {
-				tmpPos[0] = (int)(positions[i]);
-				if (tmpPos[0] < 1 || tmpPos[0] > MainWindow.DIMX-1) { return null; } //Control para que no se usen coordenadas ilegales...
-				tmpPos[1] = (int)(positions[i+1]);
-				if (tmpPos[1] < 1 || tmpPos[1] > MainWindow.DIMY-1) { return null; }
-				if(!playerPosSet.add(tmpPos)) {
-					return null; //Error con las posiciones de los barcos, hay repetidas, no tendria que pasar. Trampas???
-				}
-			}
-		}
-		catch (Exception e) {
-		}
-		return playerPosSet;
-	}
-
 }
 

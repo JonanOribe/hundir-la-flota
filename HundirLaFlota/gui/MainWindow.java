@@ -29,7 +29,7 @@ public class MainWindow extends JFrame implements WindowListener{
 	private static LabelTipoBarco[] flotaUser;
 	public static final int DIMX = 9; //Dimensiones del grid de posiciones (sera la real +1 por el extra de numeros/letras asi que 8 (9) default)
 	public static final int DIMY = 9;
-	public static final int[] TAMANYOBARCOSFLOTA = {1,2,2,3,4}; //Tamanyos de los barcos en la flota (solo 5? npi)
+	public static final int[] TAMANYOBARCOSFLOTA = {1,2,3,4}; //Tamanyos de los barcos en la flota (solo 5? npi)
 	public static int POSICIONESTOTALESBARCOS;
 
 
@@ -158,7 +158,7 @@ public class MainWindow extends JFrame implements WindowListener{
 			Utilities.inputConnectionToBoard(content, true);
 			this.getRootPane().setDefaultButton(content.chatButton);
 			content.startConnection();
-			fillWindow(content, new Dimension(1100,650));
+			fillWindow(content, new Dimension(1100,750));
 		} 
 		else if (newState == windowState.SPGAMEBOARD) {
 			if (myState != windowState.PLACEBOATS) { 

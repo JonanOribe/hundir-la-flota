@@ -3,9 +3,9 @@ package HundirLaFlota.network;
 import java.io.IOException;
 import java.net.Socket;
 
+import HundirLaFlota.gui.LabelTipoBarco;
 import HundirLaFlota.gui.MainWindow;
 import HundirLaFlota.gui.PanelCombate;
-import HundirLaFlota.misc.BoatCoordsSet;
 
 /* Clase con doble funcion: En primer lugar tiene las funciones para conectarse/reconectarse con el servidor que 
  * es quien le asignara una partida libre o con ID determinada para jugar con amigos (o le dejara reconectarse a esta).
@@ -142,7 +142,7 @@ public class ClientConnector extends ThreadedConnection{
 	}
 	
 	private String getUserShipCoords() {
-		return BoatCoordsSet.getShipsPosMsg(MainWindow.getFlotaUser());
+		return getShipsPosMsg(MainWindow.getFlotaUser());
 	}
 	/*Comando para unirse a la primera partida que este libre o montar una nueva*/
 	public void sendJoinGame(){
@@ -216,6 +216,26 @@ public class ClientConnector extends ThreadedConnection{
 	public void setMyTurn(boolean isMyTurn) {
 		this.isMyTurn = isMyTurn;
 	}
+	
+	/*Esta funcion tiene que firear despues de PanelSituaBarcos, ponerla en mainWindow?
+	 * 
+	 */
+	private static String getShipsPosMsg(LabelTipoBarco[] flota) {
+		if (flota == null) { return ""; }
+		int[][] posiciones;
+		String compoundMsg = "";
+		for (LabelTipoBarco barco : flota) {
+			posiciones = barco.getStoredLabelCoords();
+			for (int i = 0; i < posiciones.length; i++) {
+				compoundMsg += posiciones[i][0] + "," + posiciones[i][1] + ",";
+			}
+		}
+		compoundMsg = compoundMsg.substring(0, compoundMsg.length()-1);
+		compoundMsg = compoundMsg.trim();
+		return compoundMsg;
+	}
+	
+
 	
 	/*Para ejecutarlo standalone... testeo, en teoria lo generara la GUI*/
 	public static void main(String[] args){

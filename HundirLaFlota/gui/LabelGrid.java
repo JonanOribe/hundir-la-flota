@@ -21,12 +21,14 @@ public class LabelGrid extends JLabel implements MouseListener{
 	
 	protected final static String BARCOIZQPATH = "img/Barco-izq.png";
 	protected final static String BARCODERPATH = "img/Barco-der.png";
-	protected final static String BARCOMEDPATH = "img/Barco-med.png";
+	protected final static String BARCOMED1PATH = "img/Barco-med1.png";
+	protected final static String BARCOMED2PATH = "img/Barco-med2.png";
 	protected final static String BARCOARRIBAPATH = "img/Barco-vert-arr.png";
-	protected final static String BARCOMEDVERTPATH = "img/Barco-vert-med.png";
+	protected final static String BARCOMEDVERT1PATH = "img/Barco-vert-med1.png";
+	protected final static String BARCOMEDVERT2PATH = "img/Barco-vert-med2.png";
 	protected final static String BARCOABAJOPATH = "img/Barco-vert-abaj.png";
 	protected final static String BARCOSOLOUNAPOSPATH = "img/Lancha.png";
-	protected final static String BARCOSOLOUNAPOSVERTPATH = "img/Barco-1-vert.png";
+	protected final static String BARCOSOLOUNAPOSVERTPATH = "img/Lancha.png";
 	protected final static String EXPLOSION = "img/Explosion.png";
 	protected final static String AGUA = "img/fallo.jpg"; //para disparos fallidos...
 	protected final static String MAR1 = "img/mar1.jpg";
@@ -74,7 +76,7 @@ public class LabelGrid extends JLabel implements MouseListener{
 	/*Funcion que retorna verdadero si la posicion tiene un trozo de barco, depende
 	 * de la variable interna drawingShipPart	 */
 	protected boolean hasAShipPart(){
-		if (drawingShipPart >= 1 && drawingShipPart <= 4){
+		if (drawingShipPart >= 1 && drawingShipPart <= 5){
 			return true;
 		}
 		return false;
@@ -107,7 +109,7 @@ public class LabelGrid extends JLabel implements MouseListener{
 	protected BufferedImage getGridForegroundImage(boolean isTopGrid){
 			try {
 				Image barco = null;
-				//Asignacion de la imagen de fondo
+				//Asignacion de la imagen de fondo, cambiar a no usar numeros magicos...
 				switch (this.drawingShipPart){ //Esto elegira la imagen superpuesta a la de fondo
 				case 0:  
 					break;
@@ -115,18 +117,21 @@ public class LabelGrid extends JLabel implements MouseListener{
 					barco = (this.keepPaintingH) ? ImageIO.read(new File(BARCOIZQPATH)) : ImageIO.read(new File(BARCOARRIBAPATH));
 					break;
 				case 2:
-					barco = (this.keepPaintingH) ? ImageIO.read(new File(BARCOMEDPATH)) : ImageIO.read(new File(BARCOMEDVERTPATH));
+					barco = (this.keepPaintingH) ? ImageIO.read(new File(BARCOMED1PATH)) : ImageIO.read(new File(BARCOMEDVERT1PATH));
 					break;
 				case 3:
+					barco = (this.keepPaintingH) ? ImageIO.read(new File(BARCOMED2PATH)) : ImageIO.read(new File(BARCOMEDVERT2PATH));
+					break;
+				case 4:
 					barco = (this.keepPaintingH) ? ImageIO.read(new File(BARCODERPATH)) : ImageIO.read(new File(BARCOABAJOPATH));
 					break;
-				case 4: //case barco tamanyo 1
+				case 5: //case barco tamanyo 1
 					barco = (this.keepPaintingH) ? ImageIO.read(new File(BARCOSOLOUNAPOSPATH)) :  ImageIO.read(new File(BARCOSOLOUNAPOSVERTPATH));
 					break;
-				case 5: //case tocado
+				case 6: //case tocado
 					barco = (this.keepPaintingH) ? ImageIO.read(new File(EXPLOSION)) :  ImageIO.read(new File(EXPLOSION));
 					break;
-				case 6: //case agua 
+				case 7: //case agua 
 					barco = (this.keepPaintingH) ? ImageIO.read(new File(AGUA)) :  ImageIO.read(new File(AGUA));
 					break;
 				default:

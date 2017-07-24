@@ -23,7 +23,7 @@ public class PanelSituaBarcos extends JPanel{
 	private static int IDBarcoArrastrado;
 	private static boolean horizontal = true;  //Dibuja los barcos (no permanentemente dibujados) en horiz/vertical
 	private static boolean acceptedPos = false; 
-	private static final String[] BARCOSIMGPATH = {"img/Barco-1.png","img/Barco-2.png","img/Barco-3.png","img/Barco-4.png"} ; //Ordenadas por tamanyo, agregar mas si aumentas tamanyos
+	private static final String[] BARCOSIMGPATH = {"img/Lancha.png","img/Barco-2.png","img/Barco-3.png","img/Barco-4.png"} ; //Ordenadas por tamanyo, agregar mas si aumentas tamanyos
 	private LabelGrid[][] boatGrid; //Referencia al grid de arriba con las posiciones deseadas de los barcos
 	private JButton BotonAceptar;
 	
@@ -164,10 +164,10 @@ public class PanelSituaBarcos extends JPanel{
 	                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
 	                    .addComponent(PanelGrid, javax.swing.GroupLayout.DEFAULT_SIZE, 800, Short.MAX_VALUE)
 	                    .addGroup(jPanel1Layout.createSequentialGroup()
-	                        .addComponent(PanelBarcos, javax.swing.GroupLayout.PREFERRED_SIZE, 500, javax.swing.GroupLayout.PREFERRED_SIZE)
-	                        .addGap(18, 18, 18)
+	                        .addComponent(PanelBarcos, javax.swing.GroupLayout.PREFERRED_SIZE, 500, javax.swing.GroupLayout.DEFAULT_SIZE)
+	                        .addGap(5, 5, 5)
 	                        .addComponent(PanelBotones, javax.swing.GroupLayout.PREFERRED_SIZE, 300, javax.swing.GroupLayout.PREFERRED_SIZE)
-	                        .addGap(0, 9, Short.MAX_VALUE)))
+	                        .addGap(0, 9, 9)))
 	                .addContainerGap())
 	        );
 	        jPanel1Layout.setVerticalGroup(
@@ -177,8 +177,8 @@ public class PanelSituaBarcos extends JPanel{
 	                .addComponent(PanelGrid, javax.swing.GroupLayout.DEFAULT_SIZE, 400, Short.MAX_VALUE)
 	                .addGap(18, 18, 18)
 	                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-	                    .addComponent(PanelBarcos, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-	                    .addComponent(PanelBotones, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+	                    .addComponent(PanelBarcos, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE)
+	                    .addComponent(PanelBotones, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
 	                .addContainerGap())
 	        );
 
@@ -194,11 +194,11 @@ public class PanelSituaBarcos extends JPanel{
 	        );
 	        
 	        int separators = 0, totalShips = flota.length;
-	    	while (totalShips > 3) {
+	    	while (totalShips > 2) {
 	    		separators++;
-	    		totalShips-=3;
+	    		totalShips-=2;
 	    	}
-	        PanelBarcos.setLayout(new GridLayout(3,separators,10,10));
+	        PanelBarcos.setLayout(new GridLayout(2,separators,5,5));
 	        PanelBarcos.setBackground(Color.WHITE);
 			for (int i = 0; i < flota.length; i++){
 				PanelBarcos.add(flota[i]);
@@ -239,7 +239,7 @@ public class PanelSituaBarcos extends JPanel{
 		lastLabelsDrawn[0] = boatGrid[firstGridRow-1][firstGridCol-1];
 		if (!boatGrid[firstGridRow-1][firstGridCol-1].hayBarcoPermanente()) {
 			acceptedPos = true;
-			if (i == 0) { boatGrid[firstGridRow-1][firstGridCol-1].setDrawingShipPart(4, drawPermanently); return acceptedPos;} //Si es un barco de un solo elemento...
+			if (i == 0) { boatGrid[firstGridRow-1][firstGridCol-1].setDrawingShipPart(5, drawPermanently); return acceptedPos;} //Si es un barco de un solo elemento...
 			else { boatGrid[firstGridRow-1][firstGridCol-1].setDrawingShipPart(1, drawPermanently); } // Sino, pinta la label en la que esta el raton con el grafico de mas a la izkierda
 		} 
 		else { 
@@ -247,8 +247,13 @@ public class PanelSituaBarcos extends JPanel{
 		}
 		counter = 1;
 		while ( i > 0) {
-			if (i == 1) { draw = 3; }
-			else { draw = 2;}
+			if (i == 1) { draw = 4; }
+			else { 
+				if (i % 2 == 0) {
+					draw = 3;
+				} else {
+				draw = 2;}
+			}
 			tmp++;
 			if (tmp < (dim)){
 				//System.out.println("Drawing to Row: " + firstGridRow + " , Col: " + firstGridCol + " , dim (x): " + dimX);

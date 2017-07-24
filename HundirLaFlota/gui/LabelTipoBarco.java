@@ -168,7 +168,7 @@ public class LabelTipoBarco extends JLabel implements MouseListener{
 		this.cancel = true;
 		this.setBorder(null);
 		this.seleccionada = false;
-		this.setIcon(Utilities.scaleIconTo(new ImageIcon(CRUZIMG), 0,0,this.getWidth()/4,this.getHeight()));
+		this.setIcon(Utilities.scaleIconTo(new ImageIcon(CRUZIMG), 0,0,this.getWidth()/2,this.getHeight()));
 		this.setHorizontalAlignment(JLabel.CENTER);
 	}
 }

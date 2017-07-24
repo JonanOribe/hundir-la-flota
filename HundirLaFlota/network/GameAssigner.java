@@ -2,6 +2,7 @@ package HundirLaFlota.network;
 
 import java.net.Socket;
 
+import HundirLaFlota.gui.MainWindow;
 import HundirLaFlota.misc.BoatCoordsSet;
 
 /*Clase threaded que crea una conexion inicial con el cliente, comprueba que es un cliente legal y le deja unirse
@@ -65,7 +66,7 @@ public class GameAssigner extends ThreadedConnection{
 	}
 	
 	private BoatCoordsSet getShipPositions(long[] userText){
-		return BoatCoordsSet.getSetFromFormattedCoords(userText);
+		return getSetFromFormattedCoords(userText);
 	}
 	
 	/*Funcion para asignar a un jugador su partida deseada (la primera libre o una con ID elegida).*/
@@ -134,6 +135,25 @@ public class GameAssigner extends ThreadedConnection{
 		return firstChar;
 	}
 	
+	private static BoatCoordsSet getSetFromFormattedCoords(long[] positions) {
+		if (positions == null) { return null; }
+		BoatCoordsSet playerPosSet = new BoatCoordsSet();
+		try {
+			int[] tmpPos = new int[2];
+			for (int i = 2; i < positions.length-1; i+=2) {
+				tmpPos[0] = (int)(positions[i]);
+				if (tmpPos[0] < 1 || tmpPos[0] > MainWindow.DIMX-1) { return null; } //Control para que no se usen coordenadas ilegales...
+				tmpPos[1] = (int)(positions[i+1]);
+				if (tmpPos[1] < 1 || tmpPos[1] > MainWindow.DIMY-1) { return null; }
+				if(!playerPosSet.add(tmpPos)) {
+					return null; //Error con las posiciones de los barcos, hay repetidas, no tendria que pasar. Trampas???
+				}
+			}
+		}
+		catch (Exception e) {
+		}
+		return playerPosSet;
+	}
 
 
 }

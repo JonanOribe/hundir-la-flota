@@ -3,20 +3,20 @@ package HundirLaFlota.ai;
 import java.util.Random;
 
 import HundirLaFlota.gui.LabelGridCombate;
+import HundirLaFlota.gui.MainWindow;
 
 public class BoatHandling {
 
 	private static BarcoEnGrid[] flotaAI;
-	private static final int[] tamaniosFlota = {1,2,2,3,4}; //Tamanyos de los barcos en la flota (solo 5? npi)
 	private static Random randomGen = new Random(); //Para hacer pruebas de insercion aleatoria de la AI
 
 	
 	public static boolean placeAIBoatsOnGrid(LabelGridCombate[][] grid) {
-		flotaAI = new BarcoEnGrid[tamaniosFlota.length]; 
+		flotaAI = new BarcoEnGrid[MainWindow.TAMANYOBARCOSFLOTA.length]; 
 		LabelGridCombate[] posBarco = null;
 		for (int i = 0; i < flotaAI.length; i++){ //Para cada barco en la flota...
 			while (posBarco == null) { //Probar posiciones aleatorias hasta que aparezca una legal
-				posBarco =  BoatHandling.placeBoatOnGrid(randomGen.nextInt(7), randomGen.nextInt(7), tamaniosFlota[i], (randomGen.nextInt(3) > 1), grid);
+				posBarco =  BoatHandling.placeBoatOnGrid(randomGen.nextInt(7), randomGen.nextInt(7), MainWindow.TAMANYOBARCOSFLOTA[i], (randomGen.nextInt(3) > 1), grid);
 			}
 			flotaAI[i] = new BarcoEnGrid(posBarco);
 			posBarco = null;

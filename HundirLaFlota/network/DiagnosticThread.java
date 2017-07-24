@@ -25,7 +25,7 @@ public class DiagnosticThread extends Thread {
 			System.out.println("----------------");
 			System.out.println("OPCIONES:");
 			System.out.println("1.Listar partidas.");
-			System.out.println("1.Comprobar posiciones totales barcos.");
+			System.out.println("2.Comprobar posiciones totales barcos.");
 			System.out.println("5.Salir.");
 		}
 		

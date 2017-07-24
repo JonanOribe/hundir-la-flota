@@ -4,6 +4,9 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 
+import HundirLaFlota.gui.MainWindow;
+import HundirLaFlota.misc.BoatCoordsSet;
+
 /*Clase que hace de servidor para partidas de Hundir la Flota. Su funcion es escuchar por conexiones entrantes, comprobar que sean clientes de HLF y asignarles
  * la partida que desean. Una vez son dos jugadores en una partida esta comienza y se ejecuta de manera independiente al servidor (thread) mientras este
  * sigue escuchando por si hay mas conexiones. Genera a la vez un thread con un menu con opciones basicas para controlar algunos detalles del servidor en runtime
@@ -14,7 +17,7 @@ public class HLFServer extends Thread{
 	public static final int DEFAULTPORT = 4522;
 	public static final long MAXAMOUNTFORPUBLICGAMES = 100000000; //Pueden haber estas partidas publicas (por encima seran privadas)
 	public static final long MAXGAMEID = 999999999; 
-	public static final int TOTALSHIPPOSITIONS = 10; // Canviar depenent dels vaixells kes posin...
+	public static int POSICIONESTOTALESBARCOS; //NOTA: No sera dinamico por partida, cambiar a lo mejor...
 
 	private int port;
 	private boolean running = true;
@@ -23,6 +26,7 @@ public class HLFServer extends Thread{
 	private static boolean debug = true; //Para mensajes sobre la ejecucion y progreso partidas
 	
 	public HLFServer(int customPort) {
+		POSICIONESTOTALESBARCOS = MainWindow.getShipTotalPositions();
 		actualGameId = 0;
 		port = customPort;
 	}
@@ -34,7 +38,7 @@ public class HLFServer extends Thread{
 	protected void changePort(int port) {
 		this.port = port;
 	}
-	
+		
 	/*Bucle principal del programa, escucha por si hay alguna conexion entrante y si la hay y es un cliente
 	 * verificado se le une a una partida y se comienza la partida si son dos jugadores. Los primeros datos
 	 * seran enviados/recibidos a partir de un objeto gameAssigner y luego la conexion sera gestionada
@@ -110,8 +114,10 @@ public class HLFServer extends Thread{
 	
 	/*Crea una nueva partida publica (con un gameID asigando a partir de la actualGameID que comienza a 0 y va incrementando
 	 * en 1 por cada nueva partida creada)	 */
-	public static synchronized void createNewPublicGame(Socket playerConn){
+	public static synchronized void createNewPublicGame(Socket playerConn,BoatCoordsSet playerSet){
 		GameHandlerThread newGame = new GameHandlerThread(actualGameId++, playerConn);
+		newGame.setPlayer1Positions(playerSet);
+		log("Obtenidas posiciones jugador 1: " + playerSet.toString());
 		concurrentGames.add(newGame);
 		log("Assigning player to new game: " + (actualGameId-1) + ", gameId is now: " + actualGameId);
 		if (actualGameId >= MAXAMOUNTFORPUBLICGAMES) { actualGameId = 0; } //reinicializamos el numero de las partidas publicas
@@ -119,9 +125,11 @@ public class HLFServer extends Thread{
 	
 	/*Crea una nueva partida custom (con un gameID del orden de 10000000+, esta es la teoria pero es facil hacer que 
 	 * se acepten letras tambien (FUTURO supongo mas que nada para future proof)	 */
-	public static synchronized void createNewCustomGame(long cGameID, Socket playerConn){
+	public static synchronized void createNewCustomGame(long cGameID, Socket playerConn, BoatCoordsSet playerSet){
 		if(cGameID + MAXAMOUNTFORPUBLICGAMES == getHighestNonOccupiedGameID()) { cGameID++;} //Las partidas privadas deben estar por encima del numero maximo de publicas para que no haya colisiones (eso o hacer dos listas...)
 		GameHandlerThread newGame = new GameHandlerThread((cGameID + MAXAMOUNTFORPUBLICGAMES), playerConn);
+		log("Obtenidas posiciones jugador 1: " + playerSet.toString());
+		newGame.setPlayer1Positions(playerSet);
 		concurrentGames.add(newGame);
 		log("Assigning player to new custom game with ID: " + cGameID);
 	}

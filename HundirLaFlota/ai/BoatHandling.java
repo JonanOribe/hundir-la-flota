@@ -11,7 +11,7 @@ public class BoatHandling {
 	private static Random randomGen = new Random(); //Para hacer pruebas de insercion aleatoria de la AI
 
 	
-	public static boolean placeAllBoatsOnGrid(LabelGridCombate[][] grid) {
+	public static boolean placeAIBoatsOnGrid(LabelGridCombate[][] grid) {
 		flotaAI = new BarcoEnGrid[tamaniosFlota.length]; 
 		LabelGridCombate[] posBarco = null;
 		for (int i = 0; i < flotaAI.length; i++){ //Para cada barco en la flota...
@@ -51,4 +51,6 @@ public class BoatHandling {
 		}
 		return labelsBarco;
 	}
+	
+
 }

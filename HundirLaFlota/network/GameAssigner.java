@@ -2,6 +2,8 @@ package HundirLaFlota.network;
 
 import java.net.Socket;
 
+import HundirLaFlota.misc.BoatCoordsSet;
+
 /*Clase threaded que crea una conexion inicial con el cliente, comprueba que es un cliente legal y le deja unirse
  * a la partida deseada generada por HLFServer. */
 public class GameAssigner extends ThreadedConnection{
@@ -21,8 +23,7 @@ public class GameAssigner extends ThreadedConnection{
 			long[] playerAction = this.playerIntention();
 			switch ((int)playerAction[0]){
 				case 0:
-					this.assignPlayerToGame((playerAction[1] != 0), playerAction[1]); //join game
-					if (!getShipPositions()) { running = false; } //need to obtain and assign shipPositions FUTURO
+					this.assignPlayerToGame((playerAction[1] != 0), playerAction); //join game
 					break;
 				case 1:
 					HLFServer.reconnectUser(true, playerAction[1], this.conn); //rejoin as P1
@@ -63,40 +64,43 @@ public class GameAssigner extends ThreadedConnection{
 		return false;
 	}
 	
-	private boolean getShipPositions(){
-		try {
-			
-		} catch(Exception e) {
-			
-		}
-		return true;
+	private BoatCoordsSet getShipPositions(long[] userText){
+		return BoatCoordsSet.getSetFromFormattedCoords(userText);
 	}
 	
 	/*Funcion para asignar a un jugador su partida deseada (la primera libre o una con ID elegida).*/
-	protected void assignPlayerToGame(boolean custom, long gameID){
+	protected void assignPlayerToGame(boolean custom, long[] shipPos){
 		
+		long gameID = shipPos[1];
 		HLFServer.log("asked to join game: " + gameID);
-		//Comprovar si el usuario esta ya conectado a otra partida????? hmmmmmmmmmm AÑADIR POR AQUI!
-
-		GameHandlerThread assignedGame;
 		
+		GameHandlerThread assignedGame;
+		BoatCoordsSet shipPositions = getShipPositions(shipPos);
+		
+		//Control errores en las posiciones de los barcos
+		if (shipPositions == null || shipPositions.toString().equals("")) {
+			HLFServer.log("Error, invalid ship positions.");
+			return;
+		}
+
+		//Asignacion partida
 		if (!custom) { //Asignalo a la siguiente partida publica si la hay, sino crea una nueva
 			assignedGame = HLFServer.nextEmptyPublicGame();
 			HLFServer.log("Assigning to a public game");
 			if (assignedGame == null) {
-				HLFServer.createNewPublicGame(conn);
+				HLFServer.createNewPublicGame(conn, shipPositions);
 				//HAY QUE ESPERAR AL P2
 			} else {
-				assignedGame.assignP2(conn, true);
+				assignedGame.assignP2(conn, true, shipPositions);
 			}
 		} else {
 			HLFServer.log("Assigning to custom game with ID: " + gameID);
 			assignedGame = HLFServer.findCustomGame(gameID);
 			if (assignedGame == null) {
-				HLFServer.createNewCustomGame(gameID, conn);
+				HLFServer.createNewCustomGame(gameID, conn, shipPositions);
 				//HAY QUE ESPERAR AL P2
 			} else {
-				assignedGame.assignP2(conn, true);
+				assignedGame.assignP2(conn, true, shipPositions);
 			}
 		}
 	}
@@ -114,12 +118,14 @@ public class GameAssigner extends ThreadedConnection{
 	 * y los demas numeros el gameID de la partida	 */
 	protected long[] playerIntention(){
 		String inText ="";
-		long firstChar[] = new long[2];
+		long firstChar[] = new long[(2 + HLFServer.POSICIONESTOTALESBARCOS*2)];  
 		firstChar[0] = -1;
 		try {
 			inText = incomingData.readLine();
-			firstChar[0] = Long.parseLong(inText.substring(0, 1));
-			firstChar[1] = Long.parseLong(inText.substring(1));
+			String[] userText = inText.trim().split(",");
+			for (int i = 0; i < firstChar.length; i++) {
+				firstChar[i] = Long.parseLong(userText[i]);
+			}
 		} catch(Exception e){
 			HLFServer.log("Client sent a wrongly encoded game joining message " + inText); //canviar a enviar msg error al client
 			closeAll();

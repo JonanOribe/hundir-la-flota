@@ -39,6 +39,7 @@ public class LabelGrid extends JLabel implements MouseListener{
 	private boolean hayBarco = false;
 	protected boolean keepPaintingH = true; //Si hay un barco de manera permanente en la posicion mantiene el valor en el que hay que dibujarlo para siempre sino se updatea al apretar el raton
 	protected int drawingShipPart = 0;
+	protected int barcoID;
 	
 	public LabelGrid(int i, int j){
 		super("");
@@ -83,7 +84,7 @@ public class LabelGrid extends JLabel implements MouseListener{
 	protected BufferedImage getGridBackgroundImage(boolean isTopGrid){
 		try {
 			Image fondo;
-			if (isTopGrid) { fondo = (this.i == PanelSituaBarcos.DIMX-1) ?  ImageIO.read(new File(MAR2)) : ImageIO.read(new File(MAR1)); } 
+			if (isTopGrid) { fondo = (this.i == MainWindow.DIMX-1) ?  ImageIO.read(new File(MAR2)) : ImageIO.read(new File(MAR1)); } 
 			else { fondo = (this.i == 1) ?  ImageIO.read(new File(MAR2)) : ImageIO.read(new File(MAR1)); }
 			BufferedImage fondoImg = new BufferedImage(this.getWidth(), this.getHeight(), BufferedImage.TYPE_INT_ARGB);
 			fondoImg = (BufferedImage)fondo;
@@ -93,6 +94,10 @@ public class LabelGrid extends JLabel implements MouseListener{
 			System.out.println("Error al dibujar la imagen de fondo. " + e.getMessage());
 			return null;
 		}	
+	}
+	
+	public boolean isAgua() {
+		return (this.drawingShipPart == 0 || this.drawingShipPart == 6); //Sacar numeros magicos, esto es o no barco o si dibuja fallo en el disparo oponente
 	}
 
 	/*Funcion para encontrar la imagen correcta a dibujar del barco en su coordenada, la 
@@ -175,7 +180,7 @@ public class LabelGrid extends JLabel implements MouseListener{
 				PanelSituaBarcos.cleanBoatPaintedLabels();
 				paintBoat(true);
 				PanelSituaBarcos.passCoordsToBarcoLabel(barcoElegido);
-				PanelSituaBarcos.setTipoBarcoArrastrado(0);
+				PanelSituaBarcos.setTipoIDBarcoArrastrado(0,0);
 				contenedor.checkAceptarButton();
 				contenedor.repaint();
 			}		
@@ -209,6 +214,7 @@ public class LabelGrid extends JLabel implements MouseListener{
 		if (!this.hayBarco) {
 			this.drawingShipPart = newDSP;
 			this.hayBarco = permanent;
+			if (permanent){	this.barcoID = PanelSituaBarcos.getIDBarcoArrastrado(); }
 			this.keepPaintingH = PanelSituaBarcos.isHorizontal();
 		}
 	}
@@ -217,6 +223,7 @@ public class LabelGrid extends JLabel implements MouseListener{
 	public void resetDraw(){
 		this.drawingShipPart = 0;
 		this.hayBarco = false;
+		this.barcoID = 0;
 		this.keepPaintingH = true;
 	}
 	
@@ -229,9 +236,22 @@ public class LabelGrid extends JLabel implements MouseListener{
 		return coords;
 	}
 	
+	public int getBarcoID() {
+		return barcoID;
+	}
+	
+	public boolean isHorizontal(){
+		return this.keepPaintingH;
+	}
+
+	public void setBarcoID(int barcoID) {
+		this.barcoID = barcoID;
+	}
+
+	
 	public LabelGridCombate exportToLGC(){
 		if (this.hayBarco){
-			return new LabelGridCombate(this.i, this.j, this.drawingShipPart, this.keepPaintingH, false);
+			return new LabelGridCombate(this.i, this.j, this.barcoID, this.drawingShipPart, this.keepPaintingH, false);
 		}
 		else {
 			return new LabelGridCombate(this.i,this.j, false);

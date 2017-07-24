@@ -88,7 +88,7 @@ public class PlayerGameIntermediator extends ThreadedConnection{
 		String[] commands = clientInput.trim().split(",");
 		try {
 			if (commands[0].equals("r")){
-				System.out.println(this.myPlayer() + "Cleared the DC check.");
+				//System.out.println(this.myPlayer() + "Cleared the DC check.");
 			}
 			else {
 				this.myPlayerWasActive = true; //Resetea el comprobador de desconexion

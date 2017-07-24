@@ -18,6 +18,7 @@ public class PanelCombateActionHandler implements ActionListener, KeyListener{
 	private PanelCombate parent;
 	private boolean playerActive = true;
 	private int seconds = PanelCombate.SEGUNDOSPORTURNO;
+	private int pressingDelay = 0;
 
 
 	public PanelCombateActionHandler(PanelCombate panel){
@@ -31,6 +32,9 @@ public class PanelCombateActionHandler implements ActionListener, KeyListener{
 		 * si llega a zero se le envia un msg por inactividad y si vuelve a zero se le desconecta...
 		 */
 		if (cmd == null) {
+			if (pressingDelay > 0) {
+				pressingDelay--;
+			}
 			if (parent.isMyTurn()){
 				seconds--;
 				if (seconds < 0) {
@@ -73,9 +77,7 @@ public class PanelCombateActionHandler implements ActionListener, KeyListener{
 			else if (cmd.equals("Volver a jugar")){
 				JButton src = (JButton)evt.getSource();
 				MainWindow window = (MainWindow)src.getTopLevelAncestor();
-				PanelCombate panel = (PanelCombate)window.getContentPane();
-				panel.stopAll();
-				window.goToState(MainWindow.windowState.PLACEBOATS);
+				window.resetMPBoard(); 
 			}
 			else if (cmd.equals("Volver al menu")){
 				JButton src = (JButton)evt.getSource();
@@ -90,6 +92,13 @@ public class PanelCombateActionHandler implements ActionListener, KeyListener{
 		}
 	}
 	
+	public boolean isDelayActive() {
+		return (this.pressingDelay > 0);
+	}
+	
+	public void setDelay(int seconds){
+		this.pressingDelay = seconds;
+	}
 	/*Funcion auxiliar que gestiona el apretar el boton de enviar chat (se envia el texto al servidor y
 	 * se logea en la ventana de chat)	 */
 	private void chatButtonPress(){ 

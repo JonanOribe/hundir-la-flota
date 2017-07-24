@@ -1,5 +1,7 @@
 package HundirLaFlota.network;
 
+import HundirLaFlota.gui.LabelGridCombate;
+import HundirLaFlota.gui.MainWindow;
 import HundirLaFlota.gui.PanelCombate;
 
 /*Funciones que regulan la logica del cliente, en este caso comprueba los datos que
@@ -19,7 +21,7 @@ public class ClientLogic {
 			}
 			if (commands[0].equals("start")){
 				contenedor.writeInChat("Dos jugadores conectados. Comenzando la partida!");
-				contenedor.setJugadorDC(false);
+				contenedor.setGameStarted(true);
 				contenedor.jugadorLabel.setText("Jug. " + client.getPlayerNum());
 			}
 			else if (commands[0].equals("chat")) { //Win by default, other client d/ced...
@@ -45,10 +47,19 @@ public class ClientLogic {
 				jugadorSeDesconecta(true, true, contenedor);
 			}
 			else if (commands[0].equals("a")) {
-				//Primero comprueba si la posicion en la grid es barco o agua (y la misma funcion isAHit cambiara los graficos
-				//Y luego escribe en el chat y envia el mensaje correspondiente al servidor de si ha sido agua o tocado
-				String HorM = (contenedor.enemyAttacksPos(Integer.parseInt(commands[1]), Integer.parseInt(commands[2]))) ? "h":"m";
-				contenedor.writeInChat("El oponente ataca la posicion -> " + ((char)('A' + Integer.parseInt(commands[1]) - 1)) + "," + commands[2]);
+				int[] hitPos = new int[2]; 
+				hitPos[0] = Integer.parseInt(commands[1]);
+				hitPos[1] = Integer.parseInt(commands[2]);					
+				String HorM = (contenedor.enemyAttacksPos(hitPos[0], hitPos[1])) ? "h":"m"; 
+				if (HorM.equals("h")) {
+					LabelGridCombate[][] positions = contenedor.getGridCoordsBot();
+					int IDBarco = positions[hitPos[0]-1][hitPos[1]-1].getBarcoID();
+					hitPos[0] -= 1; //Esto se hace asi debido a que la correspondencia con la grid no es directa (la grid tiene las posiciones con letras/numeros por lo que hay que restarle uno al "valor real"
+					hitPos[1] -= 1;
+					boolean tyh = checkTocadoYHundido(hitPos, IDBarco, positions, hitPos);
+					if (tyh) HorM = "hu";
+				}
+				contenedor.writeInChat("El oponente ataca la posicion -> " + ((char)('A' + hitPos[0])) + "," + (hitPos[1]+1));
 				ThreadedConnection.sendMsg((HorM + "," + commands[1] + "," + commands[2]), client.outgoingData); 
 				if (client.getHalfTurn()) {
 					contenedor.setTurno(contenedor.getTurno() + 1);
@@ -58,27 +69,33 @@ public class ClientLogic {
 					client.setHalfTurn(!client.getHalfTurn());
 				}
 				contenedor.resetTimer();
-
 			} 
-			else if (commands[0].equals("h") || commands[0].equals("m")) {
-				int puntos;
+			else if (commands[0].equals("h") || commands[0].equals("m") || commands[0].equals("hu")) {
+				int incrementoPuntos;
+				int[] hitPos = new int[2]; 
+				hitPos[0] = Integer.parseInt(commands[1])-1;
+				hitPos[1] = Integer.parseInt(commands[2])-1;
 				String result;
 				boolean acierto;
 				if (commands[0].equals("h")) {
-					puntos = 1000;
+					incrementoPuntos = 1000;
 					result = "Tocado!"; 
 					acierto = true;
+				} else if (commands[0].equals("hu")) {
+					incrementoPuntos = 2000;
+					result = "Tocado y hundido!"; 
+					acierto = true;
 				}else {
-					puntos = 100;
+					incrementoPuntos = 100;
 					result = "Agua!"; 
 					acierto = false;
 				}
-				contenedor.writeInChat("Resultados de mi ataque en ("+((char)('A' + Integer.parseInt(commands[1]) - 1)) + "," + commands[2] + ") -> " + result);
+				contenedor.writeInChat("Resultados de mi ataque en ("+((char)('A' + hitPos[0])) + "," +  (hitPos[1]+1) + ") -> " + result);
 				//Dependiendo de si era agua o tocado cambiara los graficos en la label correspondiente del grid superior (donde estan los barcos enemigos)
-				contenedor.drawMyAttackResults(Integer.parseInt(commands[1]), Integer.parseInt(commands[2]), (commands[0].equals("h")));
+				contenedor.drawMyAttackResults(hitPos[0]+1, hitPos[1]+1, ( (commands[0].equals("h") || commands[0].equals("hu"))));
 				if (acierto) { contenedor.setAciertos(contenedor.getAciertos() + 1); 
 				} else { contenedor.setAguas(contenedor.getAguas() +1); }
-				client.getContenedor().setPuntos(client.getContenedor().getPuntos() + puntos);
+				client.getContenedor().setPuntos(client.getContenedor().getPuntos() + incrementoPuntos);
 				contenedor.aciertosAguasLabel.setText("ACIERTOS: " + contenedor.getAciertos() + "/" + contenedor.getAguas());
 				contenedor.puntosLabel.setText("PUNTOS: " + contenedor.getPuntos());
 				if (client.getHalfTurn()){
@@ -92,27 +109,29 @@ public class ClientLogic {
 			}
 			else if (commands[0].equals("dcwin")) { //Win by default, other client d/ced...
 				contenedor.writeInChat("El oponente se desconecto. Has ganado!");
-				jugadorSeDesconecta(true, true, contenedor);
-				contenedor.resetTimer();
-				client.stopRunning();
+				acabaPartida(contenedor, client);
 			}
 			else if (commands[0].equals("win")){
 				contenedor.writeInChat("Has hundido la flota de tu oponente. Has ganado. Felicidades!");
-				jugadorSeDesconecta(true, true, contenedor);
-				contenedor.resetTimer();
-				client.stopRunning();
+				acabaPartida(contenedor, client);
 			}
 			else if (commands[0].equals("lose")){
 				contenedor.writeInChat("Tu oponente ha hundido todos tus barcos. Has perdido!");
-				jugadorSeDesconecta(true, true, contenedor);
-				contenedor.resetTimer();
-				client.stopRunning();
+				acabaPartida(contenedor, client);
+			}			
+			else if (commands[0].equals("error")){
+				contenedor.writeInChat("Servidor(error): " + commands[1]);
 			}
 		} catch(Exception e){
 			client.getContenedor().writeInChat("Error en el formato de los datos enviados " + e.getMessage());
 		}
 	}	
 	
+	private static void acabaPartida(PanelCombate contenedor, ClientConnector client) {
+		jugadorSeDesconecta(true, true, contenedor);
+		contenedor.resetTimer();
+		client.stopRunning();
+	}
 	
 	/*Funcion que cambia el texto de los botones por si el jugador aprieta el boton de desconectar/salir
 	 * o el de reconectar (si se desconecta -> salir (que cerrara el programa), si se reconecta -> desconectar)*/
@@ -132,5 +151,64 @@ public class ClientLogic {
 		contenedor.setJugadorDC(true);
 	}
 	
-
+	/*Puede que demasiado overhead (de parametros tiene una array2d de JLabels modificadas..., en cualquier caso maximo iteraciones
+	 * sera el tamanyo del barco mas grande.
+	 */
+	private static boolean checkTocadoYHundido(int[] hitPosition, int IDBarco, LabelGridCombate[][] positions, int[] firstPosition) {
+		boolean tyh;
+		tyh = checkOneSide(hitPosition, false, positions, IDBarco, firstPosition);
+		//System.out.println("Tyh -- First one passed");
+		tyh = tyh && checkOneSide(hitPosition, true, positions, IDBarco, firstPosition);
+		//System.out.println("Tyh -- Second one passed");
+		return tyh;
+	}
+	
+	private static boolean checkOneSide(int[] hitPosition, boolean verticalCheck, LabelGridCombate[][] positions, int IDBarcoOriginal, int[] firstPosition){ 
+		LabelGridCombate testPos;
+		int changeInPos;
+		int[] foundDestroyedPart = null;
+		for (int i = -1; i < 2; i+=2) {
+			if (verticalCheck) {
+				changeInPos = hitPosition[0]+i;
+				if (changeInPos < 0 || changeInPos > (MainWindow.DIMX-2)) { //System.out.println("out of vertical bounds"); 
+				continue; 
+				}
+				testPos = positions[ changeInPos ][ hitPosition[1] ]; 
+			} else {  
+				changeInPos = hitPosition[1]+i;
+				if (changeInPos < 0 || changeInPos > (MainWindow.DIMY-2)) { //System.out.println("out of horizontal bounds");
+					continue;
+				}
+				testPos = positions[ (hitPosition[0]) ][ changeInPos ]; 
+			}
+			if (testPos.isAgua()) { //Si es agua (o agua con tiro fallido) pasamos a comprobar la siguiente posicion
+				continue;
+			}
+			if (!testPos.hasBeenShot()) { //Esto es solo si es tocado ya que hemos eliminado fallo en el tiro con esAgua()
+				if (testPos.getBarcoID() == IDBarcoOriginal) { //Si el barco sin disparar es el nuestro salimos ya que querra decir que quedan trozos sin destruir
+				return false;
+				} else {
+					continue; //Si no es el mismo barco (otro barco adyacente al nuestro) lo tratamos como agua, seguimos comprobando
+				}
+			}
+			if (testPos.hasBeenShot() && testPos.getBarcoID() == IDBarcoOriginal) { //Si es nuestro barco y ha sido disparado...
+				int[] thisPos = testPos.getCoords();
+				thisPos[0] -= 1;
+				thisPos[1] -= 1;
+				//Comprobamos que no es la posicion de la que veniamos por la funcion recursiva, si lo es seguimos comprobando
+				if (firstPosition[0] == thisPos[0] && firstPosition[1] == thisPos[1]) { 
+					continue; 
+				}
+				foundDestroyedPart = thisPos; //Si no lo es guardamos la posicion pero seguiremos comprobando las demas posiciones por si hay alguna pieza no destruida...
+				continue; 
+			}
+		}
+		if (foundDestroyedPart != null) { //Si hemos encontrado una posicion disparada de nuestro barco y ninguna sin disparar ejecutamos la funcion para esa posicion con 
+										  //La posicion actual como la posicion de la que veniamos
+			return checkTocadoYHundido(foundDestroyedPart, IDBarcoOriginal, positions, hitPosition);
+		}
+		return true; //Si hemos comprobado todas las posiciones y todo son aguas o trozos de barco disaparados devolvemos verdadero
+	}
+		
+		
 }

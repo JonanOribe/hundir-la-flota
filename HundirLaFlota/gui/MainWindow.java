@@ -25,11 +25,51 @@ public class MainWindow extends JFrame implements WindowListener{
 	private windowState myState;
 	private boolean singlePlayer;
 	private boolean createdServer = false;
+	private Dimension userScreenSize;
+	private static LabelTipoBarco[] flotaUser;
+	public static final int DIMX = 9; //Dimensiones del grid de posiciones (sera la real +1 por el extra de numeros/letras asi que 8 (9) default)
+	public static final int DIMY = 9;
+	public static final int[] TAMANYOBARCOSFLOTA = {1,2,2,3,4}; //Tamanyos de los barcos en la flota (solo 5? npi)
+	public static int POSICIONESTOTALESBARCOS;
+
 
 	public MainWindow(String title) {
 		super(title);
+		userScreenSize = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
+		POSICIONESTOTALESBARCOS = getShipTotalPositions();
 		this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE); //custom closing operations...
+		this.setLocation(50, 10); //Situamos la GUI en esta primera posicion
 		myState = windowState.MAINMENU;
+	}
+	
+	public static int getShipTotalPositions(){
+		int totalPos = 0;
+		for(int i = 0; i < TAMANYOBARCOSFLOTA.length; i++) {
+			totalPos += TAMANYOBARCOSFLOTA[i];
+		}
+		return totalPos;
+	}
+	
+	public void resetMPBoard(){
+		if (this.myState != windowState.MPGAMEBOARD) { return; }
+		PanelCombate panel = (PanelCombate)this.getContentPane();
+		int decision = MainWindow.yesNoDialogSpanish("Quieres usar las mismas posiciones?", "Repetir posiciones?");
+		panel.stopAll();
+		if (decision == JOptionPane.YES_OPTION) { //Cambiar a que funcione...
+			PanelSituaBarcos dummy = new PanelSituaBarcos(false);
+			this.setContentPane(dummy);
+			this.setMyState(MainWindow.windowState.PLACEBOATS);
+			for (LabelTipoBarco barco : flotaUser) {
+				PanelSituaBarcos.setHorizontal(barco.isHorizontal());
+				PanelSituaBarcos.setTipoIDBarcoArrastrado(barco.getTamanio(), barco.getBarcoID());
+				int[] drawingPos = barco.getFirstPosition();
+				dummy.drawSelBoatOnGrid(drawingPos[0], drawingPos[1], true);
+			}
+			this.goToState(MainWindow.windowState.MPGAMEBOARD);
+			
+		} else {
+			this.goToState(MainWindow.windowState.PLACEBOATS);
+		}
 	}
 	
 	/*Funcion para abrir un dialogo para el usuario que le dejara cerrar esta ventana, si forceQuit esta activado le hara salir
@@ -67,7 +107,7 @@ public class MainWindow extends JFrame implements WindowListener{
 	
 	/*Funcion para poner el dialogo que pide input al usuario con los textos en castellano presumiblemente, 
 	 * a lo mejor expandirla si ponemos mas idiomas */
-	private static int yesNoDialogSpanish(String mainText, String title) {
+	public static int yesNoDialogSpanish(String mainText, String title) {
         UIManager.put("OptionPane.noButtonText", "Cancelar");
         UIManager.put("OptionPane.yesButtonText", "Aceptar"); //Para no poner acentos... :P
 		int decision = JOptionPane.showConfirmDialog(null, mainText, title, JOptionPane.YES_NO_OPTION);
@@ -118,7 +158,7 @@ public class MainWindow extends JFrame implements WindowListener{
 			Utilities.inputConnectionToBoard(content, true);
 			this.getRootPane().setDefaultButton(content.chatButton);
 			content.startConnection();
-			fillWindow(content, new Dimension(1100,800));
+			fillWindow(content, new Dimension(1100,650));
 		} 
 		else if (newState == windowState.SPGAMEBOARD) {
 			if (myState != windowState.PLACEBOATS) { 
@@ -136,6 +176,19 @@ public class MainWindow extends JFrame implements WindowListener{
 			fillWindow(content);
 		}
 		myState = newState;
+	}
+	
+	/*Falta testearla mas, es para evitar que la GUI se haga demasiado grande...*/
+	private void setMaximumSize() {
+		int maxW = this.getWidth(),maxH = this.getHeight();
+		userScreenSize = java.awt.Toolkit.getDefaultToolkit().getScreenSize(); //Reseteamos por si cambio...
+		if (maxW >= userScreenSize.width) {
+			maxW = userScreenSize.width-20;
+		}
+		if (maxH >= userScreenSize.height) {
+			maxH = userScreenSize.height-40;
+		}
+		this.setPreferredSize(new Dimension(maxW,maxH));
 	}
 	
 	public windowState getMyState() {
@@ -162,12 +215,22 @@ public class MainWindow extends JFrame implements WindowListener{
 		this.singlePlayer = singlePlayer;
 	}
 
+	public static LabelTipoBarco[] getFlotaUser() {
+		return flotaUser;
+	}
+
+	public static void setFlotaUser(LabelTipoBarco[] flotaUser) {
+		MainWindow.flotaUser = flotaUser;
+	}
+	
+
 	/*Funcion para llenar esta ventana con el contenido determinado (que ha de ser subclasse de JPanel)*/
 	public void fillWindow(JPanel content){
 		this.setPreferredSize(null);
 		this.setContentPane(content);
 		this.setVisible(true);
 		this.pack();
+		setMaximumSize();
 	}
 	
 	/*Funcion para llenar la ventana con contenido y ponerle unas dimensiones determinadas*/
@@ -176,6 +239,7 @@ public class MainWindow extends JFrame implements WindowListener{
 		this.setPreferredSize(preferredDim);
 		this.setVisible(true);
 		this.pack();
+		setMaximumSize();
 	}
 
 }

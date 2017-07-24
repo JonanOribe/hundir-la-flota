@@ -2,6 +2,8 @@ package HundirLaFlota.network;
 
 import java.util.Scanner;
 
+import HundirLaFlota.gui.MainWindow;
+
 /*Clase para mantener un menu en el servidor que por ahora te deja solo listar partidas y salir,
  * se podrian expandir las propiedades de diagnostico en el futuro (listar puntos partidas, aciertos ...)*/
 
@@ -23,6 +25,7 @@ public class DiagnosticThread extends Thread {
 			System.out.println("----------------");
 			System.out.println("OPCIONES:");
 			System.out.println("1.Listar partidas.");
+			System.out.println("1.Comprobar posiciones totales barcos.");
 			System.out.println("5.Salir.");
 		}
 		
@@ -36,6 +39,10 @@ public class DiagnosticThread extends Thread {
 				case 1:
 					HLFServer.listGames();
 					break;
+				case 2:
+					HLFServer.POSICIONESTOTALESBARCOS = MainWindow.getShipTotalPositions();
+					HLFServer.log("Numero posiciones a destruir: " + HLFServer.POSICIONESTOTALESBARCOS);
+					break;
 				case 5:
 					exit = true;
 					System.out.println("Adios...");
@@ -44,6 +51,8 @@ public class DiagnosticThread extends Thread {
 				default:
 					System.out.println("Opcion incorrecta.");
 				}
+				System.out.println("-----------------------------------");
+				System.out.println("-----------------------------------");
 			}
 			sc.close();
 		}

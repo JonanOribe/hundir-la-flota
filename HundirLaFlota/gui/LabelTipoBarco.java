@@ -14,6 +14,7 @@ import HundirLaFlota.misc.Utilities;
 public class LabelTipoBarco extends JLabel implements MouseListener{
 
 	private final static String CRUZIMG = "img/cruzroja.png";
+	private static int barcosIDs = 1; //Variable que va asignando un unico valor a cada barco
 	
 	private String imagePath;
 	private int tamanio; 
@@ -22,6 +23,7 @@ public class LabelTipoBarco extends JLabel implements MouseListener{
 	private LabelGrid[] labelsBarco;
 	private boolean seleccionada; //Para saber si la label ha estado seleccionada ya
 	private int initialW = 0, initialH = 0; //Usado al resizear el tablero para poner el dibujo del tamanyo k toke
+	private int myBarcoID;
 	
 	public LabelTipoBarco (String imagePath, int tamanio, PanelSituaBarcos contenedor) {
 		super(new ImageIcon(imagePath), JLabel.LEFT);
@@ -29,6 +31,7 @@ public class LabelTipoBarco extends JLabel implements MouseListener{
 			this.imagePath = imagePath;
 			this.tamanio = tamanio;
 			this.contenedor = contenedor;
+			this.myBarcoID = barcosIDs++;
 			this.addMouseListener(this);
 			
 		}catch (Exception e){
@@ -44,6 +47,18 @@ public class LabelTipoBarco extends JLabel implements MouseListener{
 			this.setVisible(true);
 			updateSize();
 		}
+	}
+	
+	public int[] getFirstPosition(){
+		return this.labelsBarco[0].getCoords();
+	}
+	
+	public boolean isHorizontal(){
+		return this.labelsBarco[0].isHorizontal();
+	}
+	
+	public int getTamanio(){
+		return this.tamanio;
 	}
 	
 	private void updateSize(){
@@ -76,14 +91,14 @@ public class LabelTipoBarco extends JLabel implements MouseListener{
 			if (!seleccionada){
 				PanelSituaBarcos.cleanBoatPaintedLabels();
 				PanelSituaBarcos.resetBoatLabels();
-				PanelSituaBarcos.setTipoBarcoArrastrado(this.tamanio);
+				PanelSituaBarcos.setTipoIDBarcoArrastrado(this.tamanio,this.myBarcoID);
 				this.seleccionada = true;
 				this.setBorder(BorderFactory.createLineBorder(Color.BLACK));
 				this.setIcon(Utilities.scaleIconTo(new ImageIcon(imagePath),0,0,this.getWidth()-2, this.getHeight()-2));
 			}
 			else {
 				PanelSituaBarcos.cleanBoatPaintedLabels();
-				PanelSituaBarcos.setTipoBarcoArrastrado(0);
+				PanelSituaBarcos.setTipoIDBarcoArrastrado(0,0);
 				PanelSituaBarcos.setAcceptedPos(false);
 				this.seleccionada = !this.seleccionada;
 				this.setBorder(null);
@@ -133,8 +148,20 @@ public class LabelTipoBarco extends JLabel implements MouseListener{
 		}
 	}
 	
+	public int[][] getStoredLabelCoords() {
+		int[][] posiciones = new int[labelsBarco.length][2];
+		for (int i = 0; i < labelsBarco.length; i++) {
+			posiciones[i] = labelsBarco[i].getCoords();
+		}
+		return posiciones;
+	}
+	
 	public boolean hasChosenPos(){
 		return this.cancel;
+	}
+	
+	public int getBarcoID() {
+		return this.myBarcoID;
 	}
 	
 	public void setCancelIcon(){

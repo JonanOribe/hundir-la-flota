@@ -10,6 +10,7 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EtchedBorder;
 
+import HundirLaFlota.gui.MainWindow.windowState;
 import HundirLaFlota.misc.Utilities;
 
 /*Clase que creara la GUI para poner los barcos en su sitio*/
@@ -19,10 +20,10 @@ public class PanelSituaBarcos extends JPanel{
 	private static LabelTipoBarco[] flota;
 	private static LabelGrid[] lastLabelsDrawn; //Ultimas labels pintadas, usado para borrar sin tener que ciclar todas las posiciones
 	private static int tipoBarcoArrastrado;
+	private static int IDBarcoArrastrado;
 	private static boolean horizontal = true;  //Dibuja los barcos (no permanentemente dibujados) en horiz/vertical
 	private static boolean acceptedPos = false; 
-	public static final int DIMX = 9; //Dimensiones del grid de posiciones (sera la real +1 por el extra de numeros/letras asi que 8 (9) default)
-	public static final int DIMY = 9;
+	private static final String[] BARCOSIMGPATH = {"img/Barco-1.png","img/Barco-2.png","img/Barco-3.png","img/Barco-4.png"} ; //Ordenadas por tamanyo, agregar mas si aumentas tamanyos
 	private LabelGrid[][] boatGrid; //Referencia al grid de arriba con las posiciones deseadas de los barcos
 	private JButton BotonAceptar;
 	
@@ -31,16 +32,32 @@ public class PanelSituaBarcos extends JPanel{
 		initComponents(singlePlayer);
 		tipoBarcoArrastrado = 0;
 	}
+	
+	private String getShipImgPathBySize(int shipSize) {
+		switch (shipSize) {
+		case 1: 
+			return BARCOSIMGPATH[0];
+		case 2:
+			return BARCOSIMGPATH[1];
+		case 3:
+			return BARCOSIMGPATH[2];
+		case 4:
+			return BARCOSIMGPATH[3];
+		default:
+			return BARCOSIMGPATH[3];
+		}
+	}
                       
 	   	private void initComponents(boolean singlePlayer) {
 			LabelGrid.setContainer(this);	
 
-	    	flota = new LabelTipoBarco[4];
-			flota[0] = new LabelTipoBarco("img/Barco-1.png",1, this);
-			flota[1] = new LabelTipoBarco("img/Barco-2.png",2, this);
-			flota[2] = new LabelTipoBarco("img/Barco-3.png",3, this);
-			
-			flota[3] = new LabelTipoBarco("img/Barco-4.png",4, this);
+	    	flota = new LabelTipoBarco[MainWindow.TAMANYOBARCOSFLOTA.length];
+	    	int shipSize;
+	    	for (int i = 0; i < flota.length; i++) {
+	    		shipSize = MainWindow.TAMANYOBARCOSFLOTA[i];
+	    		flota[i] = new LabelTipoBarco(getShipImgPathBySize(shipSize),shipSize, this);
+	    	}
+
 			JPanel PanelBarcos = new JPanel();
 			JPanel PanelGrid = new JPanel();
 			JPanel allContainerPanel = new JPanel();
@@ -73,18 +90,12 @@ public class PanelSituaBarcos extends JPanel{
 	        
 	        BotonAceptar.addActionListener(new ActionListener () {
        	    	public void actionPerformed (ActionEvent e) {
+       	    		//System.out.println(BoatCoordsSet.getShipsPosMsg(flota));
+       	    		
        	    		JButton src = (JButton)e.getSource();
        	    		MainWindow contenedor = (MainWindow)src.getTopLevelAncestor();
-       	    		if (singlePlayer) { //Llegaremos aqui si el usuario ha elegido 1 jugador contra la AI...
-       	    			
-       	    			
-       	    			/*CAMBIAR ESTO PARA EL SINGLE PLAYER YA QUE LA GUI NO SERA LA MISMA, NO SE NECESITA
-       	    			 * NI CHAT NI NADA. ESTO FUNCIONA Y NO CONECTA AL SERVER PERO LA GUI ES LA DE MP
-       	    			 * POR LO QUE ESTARAN LOS BOTONES DE RECONECTAR ETC. 
-       	    			 * HABRIA QUE CAMBIAR EL CONSTRUCTOR, O CREAR UN PANELCOMBATE DIFERENTE DIRECTAMENTE PARA 1 JUGADOR
-       	    			 * YA SEA CAMBIANDO BOTONES/ELIMINANDO CHAT/PONIENDO EN PANELCOMBATEEVENTHANDLER LO K TOKE
-       	    			 */
-       	    			
+       	    		MainWindow.setFlotaUser(flota);
+       	    		if (singlePlayer) { //Llegaremos aqui si el usuario ha elegido 1 jugador contra la AI...    			
        	    			
        	    			contenedor.goToState(MainWindow.windowState.SPGAMEBOARD);
        	    		}
@@ -182,19 +193,20 @@ public class PanelSituaBarcos extends JPanel{
 	            .addComponent(allContainerPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
 	        );
 	        
-	        
-	        PanelBarcos.setLayout(new GridLayout(4,0,10,10));
+	        int separators = 0, totalShips = flota.length;
+	    	while (totalShips > 3) {
+	    		separators++;
+	    		totalShips-=3;
+	    	}
+	        PanelBarcos.setLayout(new GridLayout(3,separators,10,10));
 	        PanelBarcos.setBackground(Color.WHITE);
 			for (int i = 0; i < flota.length; i++){
 				PanelBarcos.add(flota[i]);
 			}
 			PanelBarcos.setBorder(BorderFactory.createEtchedBorder(EtchedBorder.RAISED));
-			/*for (int i = 0; i < 12; i++){
-				PanelBarcos.add(new JLabel("BARCO"));
-			}*/
-			PanelGrid.setLayout(new GridLayout(DIMX,DIMY,-1,-1));
+			PanelGrid.setLayout(new GridLayout(MainWindow.DIMX,MainWindow.DIMY,-1,-1));
 			
-			boatGrid = (LabelGrid[][])Utilities.createGrid(DIMX,DIMY, PanelGrid,0,null);
+			boatGrid = (LabelGrid[][])Utilities.createGrid(MainWindow.DIMX,MainWindow.DIMY, PanelGrid,0,null);
 			
 	    }
 	
@@ -220,8 +232,8 @@ public class PanelSituaBarcos extends JPanel{
 	 * esto podriamos eliminar la variable estatica acceptedPos pero ehhhh*/
 	public boolean drawSelBoatOnGrid(int firstGridRow, int firstGridCol, boolean drawPermanently){
 		int i, counter, tmp, dim, draw;
-		if (horizontal) { tmp = firstGridCol;  dim = DIMX;  }
-		else { tmp = firstGridRow; dim = DIMY; }
+		if (horizontal) { tmp = firstGridCol;  dim = MainWindow.DIMX;  }
+		else { tmp = firstGridRow; dim = MainWindow.DIMY; }
 		i = tipoBarcoArrastrado-1;
 		lastLabelsDrawn = new LabelGrid[tipoBarcoArrastrado];
 		lastLabelsDrawn[0] = boatGrid[firstGridRow-1][firstGridCol-1];
@@ -322,9 +334,14 @@ public class PanelSituaBarcos extends JPanel{
 	public static int getTipoBarcoArrastrado() {
 		return tipoBarcoArrastrado;
 	}
+	
+	public static int getIDBarcoArrastrado() {
+		return IDBarcoArrastrado;
+	}
 
-	public static void setTipoBarcoArrastrado(int tipoBarcoArrastrado) {
+	public static void setTipoIDBarcoArrastrado(int tipoBarcoArrastrado, int IDBarcoArrastrado) {
 		PanelSituaBarcos.tipoBarcoArrastrado = tipoBarcoArrastrado;
+		PanelSituaBarcos.IDBarcoArrastrado = IDBarcoArrastrado;
 	}
 
 	public static boolean isHorizontal() {
@@ -344,25 +361,13 @@ public class PanelSituaBarcos extends JPanel{
 	}
 	
 	/*Legacy, existe para testear sin venir desde el menu incial */
-	public static JFrame createNewPSBWindow(boolean singlePlayer, boolean bkgServer){
-		JFrame window = new JFrame("Posiciona tus barcos");
-		PanelSituaBarcos content = new PanelSituaBarcos(singlePlayer);
-		window.setContentPane(content);
-		window.setResizable(false);
-		if (!bkgServer) window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		//window.setPreferredSize(new Dimension(700,700));
-		window.setVisible(true);
-		window.pack();
-		return window;
+	public static void createNewPSBWindow(boolean singlePlayer){
+		MainWindow window = new MainWindow("Posiciona tus barcos");
+		window.addWindowListener(window);
+		window.goToState(windowState.PLACEBOATS);
 	}
 	
 	public static void main(String[] args){
-		JFrame window = new JFrame("test");
-		PanelSituaBarcos content = new PanelSituaBarcos(false);
-		window.setContentPane(content);
-		window.setResizable(false);
-		//window.setPreferredSize(new Dimension(700,700));
-		window.setVisible(true);
-		window.pack();
+		createNewPSBWindow(false);
 	}
 }

@@ -8,7 +8,7 @@ import java.util.ArrayList;
  * el timer de la GUI no estar activo */
 public class ConnReaperThread extends Thread{
 
-	public static final int WAKEUPMILLIS = 80000;
+	public static final int WAKEUPMILLIS = 60000;
 	private volatile boolean running = true;
 	
 	public void run(){

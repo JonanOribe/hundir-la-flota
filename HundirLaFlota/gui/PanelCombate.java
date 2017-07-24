@@ -1,13 +1,15 @@
 package HundirLaFlota.gui;
 
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.awt.event.AdjustmentEvent;
+import java.awt.event.AdjustmentListener;
 
 import javax.swing.BorderFactory;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.Timer;
 import javax.swing.border.EtchedBorder;
 
@@ -21,7 +23,7 @@ import HundirLaFlota.network.ClientConnector;
 public class PanelCombate extends JPanel{
 	
 	private LabelGridCombate[][] gridCoordsTop, gridCoordsBot;
-	static final String DEFAULTPREFIX = ">> ";   //Prefijo que se antepondra a los mensajes de chat
+	public static final String DEFAULTPREFIX = ">> ";   //Prefijo que se antepondra a los mensajes de chat
 	public static final int SEGUNDOSPORTURNO = 60; //Determina cuantos segundos tiene el usuario para actuar antes de ser avisado por inactividad en su turno
 	private PanelCombateActionHandler eventHandler;
 	private Timer turnTimer;
@@ -29,6 +31,8 @@ public class PanelCombate extends JPanel{
 	private String chosenIP;
 	private int chosenPort = 0;
 	private long chosenGameID;
+	private boolean gameStarted;
+	public boolean playerSentMsg = false;
 	private boolean jugadorDC;
 
 	private int puntos = 0;
@@ -55,7 +59,7 @@ public class PanelCombate extends JPanel{
 	
 	public PanelCombate(PanelSituaBarcos ancestor){
 		super();
-		initcomponents(PanelSituaBarcos.DIMX, PanelSituaBarcos.DIMY, ancestor);
+		initcomponents(MainWindow.DIMX, MainWindow.DIMY, ancestor);
 		turnTimer = new Timer(1000, eventHandler); //un timer que se comprueba cada segundo
 		turnTimer.start();
 	}
@@ -80,12 +84,12 @@ public class PanelCombate extends JPanel{
 		topLeftPanel = new javax.swing.JPanel();
         bottomLeftPanel = new javax.swing.JPanel();
         leftMidSmallPanel = new javax.swing.JPanel();
-        chatTextPane = new javax.swing.JScrollPane();
+        chatTextPane = new JScrollPane();
         chatScrollablePanel = new javax.swing.JTextArea();
         chatButton = new javax.swing.JButton();
         reconnectButton = new javax.swing.JButton();
         quitButton = new javax.swing.JButton();
-        inputPane = new javax.swing.JScrollPane();
+        inputPane = new JScrollPane();
         inputTextArea = new textInputArea(this);  //CAMBIAR A UNA CLASE DEDICADA A LISTENER:..
         
 		LabelGridCombate.setContainer(this);
@@ -132,6 +136,12 @@ public class PanelCombate extends JPanel{
         chatScrollablePanel.setLineWrap(true);
         chatScrollablePanel.setWrapStyleWord(true);
         chatTextPane.setViewportView(chatScrollablePanel);
+        chatTextPane.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
+        @Override
+        public void adjustmentValueChanged(AdjustmentEvent e) {;
+        	chatScrollablePanel.setCaretPosition(chatScrollablePanel.getDocument().getLength());
+        }
+    });
 
         eventHandler = new PanelCombateActionHandler(this);
         chatButton.setText("Enviar");
@@ -243,7 +253,7 @@ public class PanelCombate extends JPanel{
 	
 	/*Funcion de testeo para probar la colocacion de barcos por la AI*/
 	public void drawAIShips(){ //cambiar a private, etc.
-		BoatHandling.placeAllBoatsOnGrid(gridCoordsTop);
+		BoatHandling.placeAIBoatsOnGrid(gridCoordsTop);
 	}
 	
 	/*Funcion para escribir texto en el chat principal del programa (el bloque de texto grande
@@ -270,7 +280,7 @@ public class PanelCombate extends JPanel{
 	 * se basa en los datos recibidos por el conector del ataque enemigo
 	 * y modifica la LabelGridCombate determinada, que ademas redibuja	 */
 	public boolean enemyAttacksPos(int coordX, int coordY){
-		if (coordX > 0 && coordX < 9 && coordY > 0 && coordY < 9) { //Cambiar a usar dimx/dimy
+		if (coordX > 0 && coordX < MainWindow.DIMX && coordY > 0 && coordY < MainWindow.DIMY) { //Cambiar a usar dimx/dimy
 			if (this.gridCoordsBot[coordX-1][coordY-1].hasAShipPart()) {
 				this.gridCoordsBot[coordX-1][coordY-1].setDrawHitorMiss(true);
 				return true;
@@ -358,6 +368,15 @@ public class PanelCombate extends JPanel{
 		this.reconnectButton.setText(newText);
 	}
 	
+	public boolean pressingDelay(){
+		if (eventHandler != null) return eventHandler.isDelayActive();
+		return false;
+	}
+	
+	public void setDelay(int seconds){
+		if (eventHandler != null)eventHandler.setDelay(seconds);
+	}
+	
 	public int getPuntos() {
 		return puntos;
 	}
@@ -391,11 +410,20 @@ public class PanelCombate extends JPanel{
 	}
 
 	public void setSeconds(int seconds) {
-		eventHandler.setSeconds(seconds);
+		if (eventHandler != null) eventHandler.setSeconds(seconds);
 	}
 	
 	public void playerActed(){
 		if (eventHandler != null) eventHandler.setPlayerActive(true);
+	}
+	
+	public boolean hasGameStarted(){
+		return gameStarted;
+	}
+	
+	public void setGameStarted(boolean start){
+		this.jugadorDC = false;
+		this.gameStarted = start;
 	}
 	
 	public boolean isMyTurn(){
@@ -405,6 +433,7 @@ public class PanelCombate extends JPanel{
 	
 	public void setMyTurn(boolean newT){
 		if (connector == null) { return; }
+		playerSentMsg = false;
 		connector.setMyTurn(newT);
 		eventHandler.setSeconds(SEGUNDOSPORTURNO);
 	}
@@ -412,39 +441,24 @@ public class PanelCombate extends JPanel{
 	public void resetTimer(){
 		eventHandler.resetSeconds();
 	}
-
-	public static void startNewCombat(PanelSituaBarcos situator, boolean singlePlayer){
-		JFrame window = new JFrame("test combate");
-		PanelCombate content = new PanelCombate(situator);
-		if (!singlePlayer) {
-			Utilities.inputConnectionToBoard(content, true);
-		}
-		window.setContentPane(content);
-		window.setPreferredSize(new Dimension(1100,800));
-		window.setVisible(true);
-		window.pack();
-		window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		window.getRootPane().setDefaultButton(content.chatButton);
-		content.startConnection();
-	}
 	
-	public static void startNewCombat(PanelSituaBarcos situator){
-		startNewCombat(situator, true);
-	}		
 	
-	/*Legacy, codigo de testeo standalone para MP*/
+	/*Legacy, codigo de testeo standalone para MP con posiciones fijadas*/
 	
 	public static void main(String[] args){ 
+		/*No se puede hacer asi ya que hay que crear la flota de LabelTipoBarco tambien 
 		PanelSituaBarcos situator = new PanelSituaBarcos(false);
-		PanelSituaBarcos.setTipoBarcoArrastrado(2);
+		PanelSituaBarcos.setTipoIDBarcoArrastrado(2,1);
 		situator.drawSelBoatOnGrid(2,4,true); //Testing
-		PanelSituaBarcos.setTipoBarcoArrastrado(3);
+		PanelSituaBarcos.setTipoIDBarcoArrastrado(3,2);
 		situator.drawSelBoatOnGrid(5,2,true);
-		PanelSituaBarcos.setTipoBarcoArrastrado(1);
+		PanelSituaBarcos.setTipoIDBarcoArrastrado(2,5);
+		situator.drawSelBoatOnGrid(6,2,true);
+		PanelSituaBarcos.setTipoIDBarcoArrastrado(1,3);
 		situator.drawSelBoatOnGrid(7,7,true);
-		PanelSituaBarcos.setTipoBarcoArrastrado(4);
+		PanelSituaBarcos.setTipoIDBarcoArrastrado(4,4);
 		situator.drawSelBoatOnGrid(7,2,true);
-		startNewCombat(situator, false);
-		
+		startNewCombat(situator, false);*/
+		PanelSituaBarcos.createNewPSBWindow(false);
 	}
 }

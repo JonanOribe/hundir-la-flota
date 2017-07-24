@@ -12,11 +12,12 @@ public class LabelGridCombate extends LabelGrid implements MouseListener{
 	private static PanelCombate contenedor;
 	private boolean isTopGrid = false;
 	
-	public LabelGridCombate(int i, int j, int drawnShip, boolean horizontal, boolean topGrid){
+	public LabelGridCombate(int i, int j, int tipo, int drawnShip, boolean horizontal, boolean topGrid){
 		super(i,j);
 		this.drawingShipPart = drawnShip;
 		this.keepPaintingH = horizontal;
 		this.isTopGrid = topGrid;
+		this.barcoID = tipo;
 	}
 	
 	public LabelGridCombate(int i, int j, boolean topGrid){
@@ -54,11 +55,26 @@ public class LabelGridCombate extends LabelGrid implements MouseListener{
 	public void mousePressed(MouseEvent mouseAction) {
 		//contenedor.drawAIShips(); //Cambiar de sitio a cuando comienza la ronda, esto es para testeo de la AI
 		LabelGridCombate src = (LabelGridCombate)mouseAction.getSource();
-		if (src.isTopGrid && !hasBeenShot() && contenedor.isMyTurn()) {
-			contenedor.sendMsgThroughConnector("a," + this.i + "," + this.j); //Le envia al servidor "a," + la posicion de esta label en el grid (ej: a,3,5)
-			contenedor.playerActed();
+		if (src.isTopGrid && !hasBeenShot()) {
+			contenedor.playerActed(); //Evitar inactividad en el turno
+			if (contenedor.isMyTurn()){
+				contenedor.sendMsgThroughConnector("a," + this.i + "," + this.j); //Le envia al servidor "a," + la posicion de esta label en el grid (ej: a,3,5)
+				if (!contenedor.pressingDelay() && contenedor.playerSentMsg){
+					contenedor.writeInChat("Problemas con la conexion del otro usuario...");
+					contenedor.setSeconds(61);
+					contenedor.setDelay(3);
+					}
+			} else {
+				if (!contenedor.pressingDelay() && contenedor.playerSentMsg){
+					contenedor.writeInChat("No es tu turno...");
+					contenedor.setDelay(3);
+				}
+			}
 		}
+		contenedor.playerSentMsg = true;
 	}
+	
+		
 	public void mouseEnter(MouseEvent mouseAction) {}
 	public void mouseExit(MouseEvent mouseAction) {}
 

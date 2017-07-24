@@ -1,13 +1,15 @@
 package HundirLaFlota.network;
 
+import HundirLaFlota.gui.MainWindow;
+
 /*Funciones que regulan la logica de la partida, desde las que pasan el turno a las que comprueban las acciones 
  * recibidas por el usuario, las que comprueban si hay usuarios desconectados y las que finalizan la partida
  */
 public class GameLogic {
 	
-	static String[] legalCommands = {"a","d/c","h","m","chat","r","R","start","timeout","win","dcwin","lose"};
+	static String[] legalCommands = {"a","d/c","h","hu","m","chat","r","R","start","error","timeout","win","dcwin","lose"};
 	static String[] legalActions = {"a","d/c","chat"};
-	static String[] legalResponses = {"h","m","d/c","chat"};
+	static String[] legalResponses = {"h","hu","m","d/c","chat"};
 	
 	/*comprueba si el comando que el usuario quiere enviar es correcto dependiendo de si le toca atacar o 
 	 * ser atacado. Si lo es se lo envia al otro jugador para que responda. Estos datos son usados
@@ -15,7 +17,7 @@ public class GameLogic {
 	public static int parsePlayerCommands(String command, boolean isPlayerTurn, int playerNum, GameHandlerThread game){
 		if (command == null) { //El player se ha desconectado de manera involuntaria...
 			checkForDCPlayers(false, false, game);
-			return -1;
+			return -2; //jugador DC pero esperando a que se reconecte...
 		}
 		String[] commandData = command.trim().split(",");
 		String[] allowedActions = (isPlayerTurn) ? legalActions : legalResponses;
@@ -33,7 +35,21 @@ public class GameLogic {
 				return -1; 
 			}
 			else {
-				if (commandData[0].equals("h") || commandData[0].equals("m")){
+				//command to "a" or to h/m/hu
+				//Error checking -- incorrect or badly formatted coordinates 
+				int xPos,yPos;
+				try {
+					xPos = Integer.parseInt(commandData[1]);
+					yPos = Integer.parseInt(commandData[2]);
+					if (xPos < 1 || xPos > (MainWindow.DIMX-1) || yPos < 1 || yPos > (MainWindow.DIMY-1)) {
+						HLFServer.log(game.thisGameID() + "OUT OF BOUNDS COORDS: " + xPos + ", " + yPos);
+						return -1;
+					}
+				}catch (Exception e){
+					HLFServer.log(game.thisGameID() + "ERROR PARSING COORDS: " + command);
+					return -1;
+				}	
+				if (commandData[0].equals("h") || commandData[0].equals("m") || commandData[0].equals("hu")){
 					return 3;
 				}
 				return 2; //envia y avanza turno
@@ -83,6 +99,34 @@ public class GameLogic {
 		int playersDCed = whoDCed(game);
 		game.setWaitingForRC(playersDCed);
 		if (!game.running) { return; }
+		//Comprovacion inactividad en enviar comandos, no en la conexion...
+		int dcValue = 0;
+		if (reaperCheck){
+			if (playersDCed == 1 || playersDCed == 3) {
+				if (game.player1Acted) {
+					game.player1Acted = false;
+					HLFServer.log(game.thisGameID() +"player 1 hasnt connected in a while");
+				} else {
+					game.disconnectPlayer(game.getP1Listener(), true);
+					HLFServer.log(game.thisGameID() +"player 1 hasnt connected in too long. He loses");
+					dcValue += 1;
+				}
+			}
+			if (playersDCed == 2 || playersDCed == 3) {
+				if (game.player2Acted) {
+					game.player2Acted = false;
+					HLFServer.log(game.thisGameID() +"player 2 hasnt connected in a while");
+				} else {
+					game.disconnectPlayer(game.getP2Listener(), true);
+					HLFServer.log(game.thisGameID() +"player 2 hasnt connected in too long. He loses");
+					dcValue += 2;
+				}
+			}
+		}
+		if (dcValue > 0){
+			gameEndedInDC(dcValue, game);
+		}
+		
 		if (playersDCed > 0) { //Si hay jugadores desconectados...
 			if (playersDCed < 3) {
 				if (dcedOnPurpose) {
@@ -92,31 +136,8 @@ public class GameLogic {
 			else { 
 				HLFServer.log(game.thisGameID() + "BOTH PLAYERS DISCONNECTED"); gameEndedInDC(3, game); 
 			}
-			return;
 		}
-		//Comprovacion inactividad en enviar comandos, no en la conexion...
-		int dcValue = 0;
-		if (reaperCheck){
-			if (game.player1Acted) {
-				game.player1Acted = false;
-				HLFServer.log(game.thisGameID() +"player 1 hasnt acted in a while");
-			} else {
-				game.disconnectPlayer(game.getP1Listener(), true);
-				HLFServer.log(game.thisGameID() +"player 1 hasnt acted in too long. disconnecting");
-				dcValue += 1;
-			}
-			if (game.player2Acted) {
-				game.player2Acted = false;
-				HLFServer.log(game.thisGameID() +"player 2 hasnt acted in a while");
-			} else {
-				game.disconnectPlayer(game.getP2Listener(), true);
-				HLFServer.log(game.thisGameID() +"player 2 hasnt acted in too long. disconnecting");
-				dcValue += 2;
-			}
-		}
-		if (dcValue > 0){
-			gameEndedInDC(dcValue, game);
-		}
+
 	}
 	
 	

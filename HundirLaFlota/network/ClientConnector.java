@@ -3,7 +3,9 @@ package HundirLaFlota.network;
 import java.io.IOException;
 import java.net.Socket;
 
+import HundirLaFlota.gui.MainWindow;
 import HundirLaFlota.gui.PanelCombate;
+import HundirLaFlota.misc.BoatCoordsSet;
 
 /* Clase con doble funcion: En primer lugar tiene las funciones para conectarse/reconectarse con el servidor que 
  * es quien le asignara una partida libre o con ID determinada para jugar con amigos (o le dejara reconectarse a esta).
@@ -54,6 +56,7 @@ public class ClientConnector extends ThreadedConnection{
 			}
 		}
 		contenedor.writeInChat("Cerrada la conexion con el servidor.");
+		ClientLogic.jugadorSeDesconecta(true, true, contenedor);
 		closeAll();
 	}
 
@@ -134,10 +137,13 @@ public class ClientConnector extends ThreadedConnection{
 	/*Funcion para hacer que los mensajes salientes hacia el servidor tengan el tipo correspondiente 
 	 * a la accion que llevan asociados */
 	private void composeServerMsg(int type, String msg){
-		msg = Integer.toString(type) + msg;
+		msg = Integer.toString(type) + "," + msg;
 		sendMsg(msg,this.outgoingData);
 	}
 	
+	private String getUserShipCoords() {
+		return BoatCoordsSet.getShipsPosMsg(MainWindow.getFlotaUser());
+	}
 	/*Comando para unirse a la primera partida que este libre o montar una nueva*/
 	public void sendJoinGame(){
 		sendJoinCustomGame(0);
@@ -145,12 +151,14 @@ public class ClientConnector extends ThreadedConnection{
 	
 	/*Comando para unirse a una partida con una ID determinada*/
 	public boolean sendJoinCustomGame(long gameID){
-		composeServerMsg(0, Long.toString(gameID));
+		composeServerMsg(0, Long.toString(gameID) + "," + getUserShipCoords());
 		try {
 			String msg = incomingData.readLine();
 			String[] msgValues = msg.trim().split(",");
 			String player = " como Jugador 2.";
-			this.assignedGameID = Long.parseLong(msgValues[0]);
+			long assignedGame = Long.parseLong(msgValues[0]);
+			if (assignedGame < 0) { contenedor.writeInChat("Error en el formato de envio de datos, comprueba que el programa no este danyado."); return false; }
+			this.assignedGameID = assignedGame;
 			String gameType = (gameID == 0) ? "publica" : "privada"; 
 			String customGameID = "";
 			if (assignedGameID >= HLFServer.MAXAMOUNTFORPUBLICGAMES) {
@@ -165,7 +173,7 @@ public class ClientConnector extends ThreadedConnection{
 			contenedor.writeInChat("Conectado a la partida " + gameType +" con ID " + customGameID + player); //assignar reconnect token en el futur?
 			return true;
 		} catch (Exception e){
-			System.out.println("ID asignada equivocada " + e.getMessage());
+			contenedor.writeInChat("ID asignada equivocada " + e.getMessage());
 			return false; //Wont start waiting for the game...
 		}
 	}
